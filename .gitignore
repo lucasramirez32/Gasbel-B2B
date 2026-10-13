@@ -1,0 +1,29 @@
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node / Tailwind
+node_modules/
+dist/
+.npm/
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Agent local artifacts
+.agents/credentials/
