@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Gasbel.Application/Gasbel.Application.csproj" />
+    <Project Path="src/Gasbel.Domain/Gasbel.Domain.csproj" />
+    <Project Path="src/Gasbel.Infrastructure/Gasbel.Infrastructure.csproj" />
+    <Project Path="src/Gasbel.Web/Gasbel.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Gasbel.Tests/Gasbel.Tests.csproj" />
+  </Folder>
+</Solution>
