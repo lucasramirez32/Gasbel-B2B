@@ -12,6 +12,7 @@ dist/
 .npm/
 
 # IDE & OS
+.vs/
 .vscode/
 .idea/
 Thumbs.db
@@ -27,3 +28,8 @@ $RECYCLE.BIN/
 
 # Agent local artifacts
 .agents/credentials/
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal

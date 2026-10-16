@@ -9,8 +9,35 @@ public class Product
     public Category Category { get; set; } = null!;
 
     public string Sku { get; set; } = string.Empty;
+    public string? SupplierCode { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Medidas o dimensiones extraídas (ej. 15x20 cm, 33x40 cm, 15 cm)
+    /// </summary>
+    public string? Dimensions { get; set; }
+
+    /// <summary>
+    /// Capacidad o volumen extraído (ej. 500 ml, 180 cc, 1 kg)
+    /// </summary>
+    public string? Capacity { get; set; }
+
+    /// <summary>
+    /// Presentación o cantidad del paquete (ej. x 100 U, x 50 U, x 1 U)
+    /// </summary>
+    public string? PackageQuantity { get; set; }
+
+    /// <summary>
+    /// Proveedor de origen del artículo
+    /// </summary>
+    public string? Supplier { get; set; }
+
+    /// <summary>
+    /// Observaciones adicionales del cliente / inventario
+    /// </summary>
+    public string? Notes { get; set; }
+
     public UnitOfMeasure UnitOfMeasure { get; set; } = UnitOfMeasure.Package;
     public PackagingType PackagingType { get; set; } = PackagingType.Box;
     
@@ -20,9 +47,19 @@ public class Product
     public int UnitsPerBox { get; set; } = 1;
 
     /// <summary>
-    /// Precio base de lista (minorista) por unidad de medida base.
+    /// Precio de costo de compra al proveedor.
+    /// </summary>
+    public decimal CostPrice { get; set; }
+
+    /// <summary>
+    /// Precio venta 1: base de lista (minorista) por unidad.
     /// </summary>
     public decimal BasePrice { get; set; }
+
+    /// <summary>
+    /// Precio venta 2: lista mayorista / gastronómico / reventa.
+    /// </summary>
+    public decimal WholesalePrice { get; set; }
 
     public int StockUnits { get; set; } = 0;
     public bool IsActive { get; set; } = true;

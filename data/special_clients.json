@@ -1,0 +1,22 @@
+[
+  {
+    "Id": "affd0ba7-12bd-48a9-ae2d-9ac8866f1850",
+    "Name": "Sandra Marz\u00E1n",
+    "DiscountPercentage": 25,
+    "Phone": "2616799084",
+    "Address": "Mendoza Capital",
+    "Notes": "Cliente preferencial l\u00EDnea perfumer\u00EDa y descartables",
+    "IsActive": true,
+    "CreatedAt": "2026-10-16T04:13:49.0956252Z"
+  },
+  {
+    "Id": "cab44563-7a1f-4cfa-8722-1581d5bd2448",
+    "Name": "Distribuidora Mayorista Cuyo",
+    "DiscountPercentage": 30,
+    "Phone": "2613890532",
+    "Address": "Godoy Cruz, Mendoza",
+    "Notes": "Cuenta especial 30% volumen recurrente",
+    "IsActive": true,
+    "CreatedAt": "2026-10-16T04:13:49.095677Z"
+  }
+]

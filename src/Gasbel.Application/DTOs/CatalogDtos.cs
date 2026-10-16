@@ -23,18 +23,89 @@ public record ProductDto(
     Guid CategoryId,
     string CategoryName,
     string Sku,
+    string? SupplierCode,
     string Name,
     string Description,
+    string? Dimensions,
+    string? Capacity,
+    string? PackageQuantity,
+    string? Supplier,
+    string? Notes,
     string UnitOfMeasure,
     string PackagingType,
     int UnitsPerBox,
+    decimal CostPrice,
     decimal BasePrice,
+    decimal WholesalePrice,
     decimal CurrentCalculatedPrice,
     string CurrentPriceSource,
     decimal SavingsPercentage,
     int StockUnits,
     bool IsActive,
+    string? ImageUrl,
     List<TierPriceDto> Tiers
+);
+
+public record CreateProductRequest(
+    Guid CategoryId,
+    string Sku,
+    string? SupplierCode,
+    string Name,
+    string? Description,
+    string? Dimensions,
+    string? Capacity,
+    string? PackageQuantity,
+    string? Supplier,
+    string? Notes,
+    string? UnitOfMeasure,
+    string? PackagingType,
+    int UnitsPerBox,
+    decimal CostPrice,
+    decimal BasePrice,
+    decimal WholesalePrice,
+    int StockUnits,
+    bool IsActive,
+    string? ImageUrl
+);
+
+public record UpdateProductRequest(
+    Guid CategoryId,
+    string Sku,
+    string? SupplierCode,
+    string Name,
+    string? Description,
+    string? Dimensions,
+    string? Capacity,
+    string? PackageQuantity,
+    string? Supplier,
+    string? Notes,
+    string? UnitOfMeasure,
+    string? PackagingType,
+    int UnitsPerBox,
+    decimal CostPrice,
+    decimal BasePrice,
+    decimal WholesalePrice,
+    int StockUnits,
+    bool IsActive,
+    string? ImageUrl
+);
+
+public record AttributeExtractionResult(
+    string OriginalTitle,
+    string CleanName,
+    string? Dimensions,
+    string? Capacity,
+    string? PackageQuantity,
+    string? SuggestedCategory
+);
+
+public record CatalogStatsDto(
+    int TotalProducts,
+    int ActiveProducts,
+    int InactiveProducts,
+    int MissingImages,
+    int MissingDimensions,
+    int PerfumeryCount
 );
 
 public record CustomerGroupDto(

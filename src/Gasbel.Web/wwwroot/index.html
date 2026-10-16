@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gasbel B2B | Catálogo & Cotizador de Descartables</title>
+  <title>Gasbel | Catálogo de Artículos</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -14,6 +14,11 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
     [x-cloak] { display: none !important; }
+    .nav-tab-active {
+      background-color: #f8fafc;
+      color: #0f172a;
+      border-bottom: 2px solid #d97706;
+    }
   </style>
 </head>
 <body class="min-h-full flex flex-col text-slate-800">
@@ -23,80 +28,159 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16 gap-4">
         
-        <!-- Logo -->
+        <!-- Logo & Brand -->
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-amber-500/20">
             G
           </div>
           <div>
-            <span class="text-xl font-extrabold tracking-tight text-slate-900">GASBEL<span class="text-amber-600 ml-1">B2B</span></span>
+            <span class="text-xl font-extrabold tracking-tight text-slate-900">GASBEL</span>
             <p class="text-xs font-medium text-slate-500 hidden sm:block">Distribución Mayorista de Descartables & Embalaje</p>
           </div>
         </div>
 
-        <!-- B2B Context Simulator -->
-        <div class="flex items-center gap-3">
-          <div class="bg-slate-100 p-1.5 rounded-lg border border-slate-200 hidden md:flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-2">Perfil:</span>
-            <select id="groupSelector" onchange="onGroupChanged()" class="bg-white border-0 text-xs font-semibold text-slate-800 py-1.5 px-3 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 outline-none cursor-pointer">
-              <option value="">Minorista (Público General)</option>
-              <!-- Dinámico vía JS -->
+        <!-- Center Navigation Tabs (Solo visible para Administrador) -->
+        <nav id="adminNavCenter" class="hidden items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+          <button id="navBtnCatalog" onclick="switchView('catalog')" class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">
+            <i data-lucide="store" class="w-4 h-4 text-amber-600"></i>
+            <span>Catálogo B2B</span>
+          </button>
+          <button id="navBtnAdmin" onclick="switchView('admin')" class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all text-slate-600 hover:text-slate-900">
+            <i data-lucide="layout-grid" class="w-4 h-4 text-slate-500"></i>
+            <span>Gestión / ABM</span>
+            <span id="navStatsBadge" class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+          </button>
+        </nav>
+
+        <!-- Header Actions: API link (Admin only), Cart & Admin Access -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- B2B Profile & Discount Selector (Oculto según especificación de cliente, reemplazado por grilla especial en Admin) -->
+          <div id="simulatorSelectorWrapper" class="hidden">
+            <select id="groupSelector" onchange="onGroupChanged()">
+              <option value="">P. Venta 1 (Minorista / Base)</option>
             </select>
           </div>
 
-          <a href="/scalar/v1" target="_blank" class="text-xs font-semibold text-slate-600 hover:text-amber-600 hidden lg:inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
-            <i data-lucide="file-code-2" class="w-4 h-4"></i> OpenAPI Docs
+          <!-- API Docs Link (Admin only) -->
+          <a id="btnApiDocs" href="/scalar/v1" target="_blank" class="hidden text-xs font-semibold text-slate-600 hover:text-amber-600 items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
+            <i data-lucide="file-code-2" class="w-4 h-4"></i> API
           </a>
 
           <!-- Cart / Quote Button -->
-          <button onclick="toggleQuoteDrawer()" class="relative inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-md shadow-amber-500/20 transition-all">
+          <button onclick="toggleQuoteDrawer()" class="relative inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold text-sm px-3.5 sm:px-4 py-2 rounded-xl shadow-md shadow-amber-500/20 transition-all">
             <i data-lucide="shopping-cart" class="w-4 h-4"></i>
             <span class="hidden sm:inline">Cotización</span>
             <span id="cartCountBadge" class="bg-slate-900 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center -ml-0.5">0</span>
           </button>
+
+          <!-- Botón de acceso de Administrador (para modo público) -->
+          <button id="btnAdminAccess" onclick="openAdminAuthModal()" title="Acceso Administración" class="text-xs font-semibold text-slate-600 hover:text-amber-600 hover:bg-slate-100 px-2.5 py-2 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200/80">
+            <i data-lucide="lock" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span class="hidden md:inline">Admin</span>
+          </button>
+
+          <!-- Badge de Administrador Activo (cuando está autenticado) -->
+          <div id="adminBadgeWrapper" class="hidden items-center gap-2 bg-amber-50 border border-amber-200/90 pl-3 pr-2 py-1.5 rounded-xl shadow-xs">
+            <span class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <span class="text-xs font-bold text-amber-900">Admin</span>
+            <button onclick="logoutAdmin()" title="Cerrar sesión de administrador" class="text-slate-400 hover:text-rose-600 p-1 rounded-md transition-colors ml-0.5">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
         </div>
 
       </div>
     </div>
 
-    <!-- Active Profile Notice Banner -->
+    <!-- Active Profile Notice Banner (Solo en vista Catálogo) -->
     <div id="profileBanner" class="bg-amber-50 border-t border-amber-200/60 px-4 py-1.5 text-xs font-medium text-amber-900 flex items-center justify-center gap-2">
       <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i>
-      <span id="profileBannerText">Precios minoristas estándar. Selecciona un perfil comercial para ver bonificaciones de escala.</span>
+      <span id="profileBannerText">Catálogo oficial de artículos Gasbel. Precios actualizados en tiempo real.</span>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <!-- ======================================================== -->
+  <!-- VISTA 1: CATÁLOGO B2B PÚBLICO                             -->
+  <!-- ======================================================== -->
+  <main id="viewCatalog" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-    <!-- Search & Filter Controls -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <!-- Banner de Bienvenida: Cliente Especial con Descuento Exclusivo (cuando entra con link) -->
+    <div id="specialClientWelcomeBanner" class="hidden mb-6 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-amber-400/40 relative overflow-hidden">
+      <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 text-white shadow-inner">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] uppercase tracking-wider font-extrabold bg-white/25 px-2.5 py-0.5 rounded-full">Cliente Exclusivo</span>
+              <span id="welcomeClientDiscountBadge" class="text-xs font-black bg-white text-amber-900 px-2.5 py-0.5 rounded-full shadow-xs">25% OFF</span>
+            </div>
+            <h3 id="welcomeClientName" class="text-base sm:text-lg font-black mt-1 leading-tight">¡Bienvenido!</h3>
+            <p id="welcomeClientSubtitle" class="text-xs text-amber-100 mt-0.5">Tus pedidos cuentan con un descuento especial asignado que se aplicará en tu cotización.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="toggleQuoteDrawer()" class="px-4 py-2 bg-white text-slate-900 hover:bg-amber-50 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-amber-600"></i>
+            <span>Ver mi Cotización</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky Search & Filter Controls -->
+    <div id="catalogFilterBar" class="sticky top-[93px] z-20 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all">
       
-      <!-- Category Tabs -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none" id="categoryTabs">
-        <button onclick="selectCategory(null)" id="tab-all" class="cat-tab px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-900 text-white shadow-sm transition-all whitespace-nowrap">
-          Todos los Productos
-        </button>
-        <!-- Categorías dinámicas -->
+      <div class="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <!-- Category Selector (Dropdown compacto sin desborde) -->
+        <div class="relative w-full sm:w-72">
+          <i data-lucide="filter" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <select 
+            id="categorySelect" 
+            onchange="onCategorySelectChange(this.value)" 
+            class="w-full bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 pl-9 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm appearance-none cursor-pointer">
+            <option value="">Todas las Categorías</option>
+          </select>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input 
+            type="text" 
+            id="searchInput" 
+            oninput="onSearchInput()" 
+            placeholder="Buscar por SKU, nombre, medidas (ej. 15X20, 500 ML)..." 
+            class="w-full bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm"
+          />
+          <button 
+            id="clearSearchBtn" 
+            onclick="clearSearchInput()" 
+            title="Limpiar búsqueda"
+            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-md transition-colors">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
       </div>
 
-      <!-- Search Input -->
-      <div class="relative w-full md:w-72">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input 
-          type="text" 
-          id="searchInput" 
-          oninput="onSearchInput()" 
-          placeholder="Buscar por SKU o nombre..." 
-          class="w-full bg-white border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all shadow-sm"
-        />
+      <!-- Results Count Badge -->
+      <div class="flex items-center justify-between sm:justify-end gap-2 text-xs font-medium text-slate-500 pt-1 md:pt-0 border-t md:border-t-0 border-slate-100">
+        <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg font-semibold text-xs whitespace-nowrap">
+          <i data-lucide="boxes" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span id="catalogCountText">Cargando artículos...</span>
+        </span>
       </div>
 
     </div>
 
     <!-- Catalog Grid -->
     <div id="productGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-      <!-- Loading skeletons or products injected here -->
+      <!-- Inyectado dinámicamente -->
     </div>
 
     <!-- Empty State -->
@@ -106,66 +190,742 @@
       <p class="text-xs text-slate-500 mt-1">Prueba cambiando los filtros o la búsqueda.</p>
     </div>
 
+    <!-- Catalog Pagination Controls (8 productos por página) -->
+    <div id="catalogPagination" class="hidden mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-xs text-slate-500 font-medium">
+        Mostrando <span id="paginationRangeText" class="font-bold text-slate-800">1 - 8</span> de <span id="paginationTotalText" class="font-bold text-slate-800">0</span> artículos
+        <span class="text-slate-300 mx-2">|</span>
+        Página <span id="paginationCurrentText" class="font-bold text-amber-600">1</span> de <span id="paginationPagesText" class="font-bold text-slate-800">1</span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button 
+          id="btnPrevPage" 
+          onclick="changeCatalogPage(catalogCurrentPage - 1)" 
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-xs">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          <span>Anterior</span>
+        </button>
+
+        <div id="paginationButtons" class="flex items-center gap-1">
+          <!-- Botones numéricos generados dinámicamente -->
+        </div>
+
+        <button 
+          id="btnNextPage" 
+          onclick="changeCatalogPage(catalogCurrentPage + 1)" 
+          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-xs">
+          <span>Siguiente</span>
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
   </main>
 
-  <!-- Quote Drawer (Off-canvas) -->
+  <!-- ======================================================== -->
+  <!-- VISTA 2: GESTIÓN DE ARTÍCULOS & ABM                     -->
+  <!-- ======================================================== -->
+  <main id="viewAdmin" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Admin Navigation Sub-Tabs -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-6">
+      <div class="flex items-center gap-2">
+        <button id="adminTabBtn-products" onclick="switchAdminTab('products')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs flex items-center gap-2 transition">
+          <i data-lucide="package" class="w-4 h-4"></i>
+          <span>Artículos & ABM</span>
+        </button>
+        <button id="adminTabBtn-clients" onclick="switchAdminTab('clients')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 flex items-center gap-2 transition">
+          <i data-lucide="users" class="w-4 h-4 text-amber-600"></i>
+          <span>Clientes con Descuento Especial</span>
+          <span id="specialClientsCountBadge" class="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-black">0</span>
+        </button>
+        <button id="adminTabBtn-settings" onclick="switchAdminTab('settings')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 flex items-center gap-2 transition">
+          <i data-lucide="sliders" class="w-4 h-4 text-slate-500"></i>
+          <span>Reglas Comerciales & WhatsApp</span>
+        </button>
+      </div>
+
+      <!-- Quick Session Indicator -->
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-200 text-[11px] font-bold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Administrador Conectado
+        </span>
+        <button onclick="logoutAdmin()" class="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 rounded-lg hover:bg-rose-50 transition">
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: ARTÍCULOS & CATÁLOGO (ABM)          -->
+    <!-- ========================================== -->
+    <div id="adminTab-products" class="space-y-6">
+      <!-- KPI / Stats Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div onclick="setAdminFilter('all')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 transition cursor-pointer">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium mb-1">
+            <span>Total Artículos</span>
+            <i data-lucide="boxes" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <div id="statTotal" class="text-xl font-black text-slate-900">0</div>
+        </div>
+
+        <div onclick="setAdminFilter('active')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-emerald-400 transition cursor-pointer">
+          <div class="flex items-center justify-between text-emerald-600 text-xs font-medium mb-1">
+            <span>Activos (Catálogo)</span>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+          </div>
+          <div id="statActive" class="text-xl font-black text-emerald-600">0</div>
+        </div>
+
+        <div onclick="setAdminFilter('perfumery')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-purple-400 transition cursor-pointer">
+          <div class="flex items-center justify-between text-purple-600 text-xs font-medium mb-1">
+            <span>Perfumería (Inactivos)</span>
+            <i data-lucide="sparkles" class="w-4 h-4 text-purple-500"></i>
+          </div>
+          <div id="statPerfumery" class="text-xl font-black text-purple-600">0</div>
+        </div>
+
+        <div onclick="setAdminFilter('missingImage')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-amber-500 transition cursor-pointer">
+          <div class="flex items-center justify-between text-amber-600 text-xs font-medium mb-1">
+            <span>Sin Foto</span>
+            <i data-lucide="image-off" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div id="statMissingImages" class="text-xl font-black text-amber-600">0</div>
+        </div>
+
+        <div onclick="setAdminFilter('missingDimensions')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-sky-400 transition cursor-pointer">
+          <div class="flex items-center justify-between text-sky-600 text-xs font-medium mb-1">
+            <span>Sin Medidas</span>
+            <i data-lucide="ruler" class="w-4 h-4 text-sky-500"></i>
+          </div>
+          <div id="statMissingDimensions" class="text-xl font-black text-sky-600">0</div>
+        </div>
+
+        <div onclick="setAdminFilter('inactive')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:border-rose-400 transition cursor-pointer">
+          <div class="flex items-center justify-between text-slate-500 text-xs font-medium mb-1">
+            <span>Total Inactivos</span>
+            <i data-lucide="eye-off" class="w-4 h-4 text-slate-400"></i>
+          </div>
+          <div id="statInactive" class="text-xl font-black text-slate-700">0</div>
+        </div>
+      </div>
+
+      <!-- ABM Toolbar -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <!-- Filter buttons -->
+        <div class="flex flex-wrap items-center gap-1.5" id="adminFilterTabs">
+          <button onclick="setAdminFilter('all')" id="btnFilter-all" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-900 text-white transition">Todos</button>
+          <button onclick="setAdminFilter('active')" id="btnFilter-active" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Solo Activos</button>
+          <button onclick="setAdminFilter('perfumery')" id="btnFilter-perfumery" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+            <span>🌸 Perfumería (Sandra Marzan)</span>
+          </button>
+          <button onclick="setAdminFilter('missingImage')" id="btnFilter-missingImage" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+            <span>📸 Sin Foto</span>
+          </button>
+          <button onclick="setAdminFilter('missingDimensions')" id="btnFilter-missingDimensions" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+            <span>📏 Sin Medidas</span>
+          </button>
+        </div>
+
+        <!-- Search & Action Buttons -->
+        <div class="flex items-center gap-2">
+          <div class="relative w-full sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="adminSearchInput" 
+              oninput="onAdminSearchInput()" 
+              placeholder="Filtrar por SKU, nombre, proveedor..." 
+              class="w-full bg-slate-50 border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+            />
+          </div>
+
+          <button onclick="openProductModal(null)" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm transition">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span class="whitespace-nowrap">Nuevo Artículo</span>
+          </button>
+
+          <button onclick="reimportCsv()" title="Re-sincronizar desde data/articulos_gasbel.csv" class="p-2 border border-slate-200 text-slate-600 hover:text-amber-600 hover:bg-slate-50 rounded-xl transition" title="Recargar CSV">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ABM Table Container -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4 w-14 text-center">Foto</th>
+                <th class="py-3 px-4">SKU / Cód.Prov</th>
+                <th class="py-3 px-4">Artículo & Rubro</th>
+                <th class="py-3 px-4">Medidas / Atributos</th>
+                <th class="py-3 px-4 text-right">P. Costo</th>
+                <th class="py-3 px-4 text-right">P. Venta 1</th>
+                <th class="py-3 px-4 text-right">P. Venta 2</th>
+                <th class="py-3 px-4 text-center">Stock</th>
+                <th class="py-3 px-4 text-center">Estado</th>
+                <th class="py-3 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody" class="divide-y divide-slate-100 text-xs">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Table Footer / Pagination -->
+        <div class="p-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+          <span id="adminTableCount">Cargando artículos...</span>
+          <div class="flex items-center gap-1" id="adminPagination">
+            <!-- Botones de página -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: CLIENTES CON DESCUENTO ESPECIAL     -->
+    <!-- ========================================== -->
+    <div id="adminTab-clients" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+              <i data-lucide="badge-percent" class="w-5 h-5"></i>
+            </div>
+            <h2 class="text-base font-bold text-slate-900">Grilla de Clientes con Descuento Específico</h2>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">
+            Asigna un porcentaje exclusivo para clientes seleccionados (ej: 25%, 30%). Al generar cotizaciones con su nombre o teléfono, el descuento se calcula de forma automática.
+          </p>
+        </div>
+
+        <button onclick="openSpecialClientModal(null)" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition shrink-0">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Agregar Cliente con Descuento</span>
+        </button>
+      </div>
+
+      <!-- Clients Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">Cliente / Razón Social</th>
+                <th class="py-3 px-4 text-center">Descuento Asignado</th>
+                <th class="py-3 px-4 text-center">Enlace de Acceso</th>
+                <th class="py-3 px-4">Teléfono / WhatsApp</th>
+                <th class="py-3 px-4">Dirección / Localidad</th>
+                <th class="py-3 px-4">Observaciones</th>
+                <th class="py-3 px-4 text-center">Estado</th>
+                <th class="py-3 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="specialClientsTableBody" class="divide-y divide-slate-100 text-xs">
+              <!-- Filas dinámicas de clientes especiales -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: REGLAS COMERCIALES & WHATSAPP       -->
+    <!-- ========================================== -->
+    <div id="adminTab-settings" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm max-w-3xl">
+        <div class="flex items-center gap-2.5 pb-4 border-b border-slate-100 mb-5">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+            <i data-lucide="sliders" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Parámetros y Reglas Comerciales Gasbel</h2>
+            <p class="text-xs text-slate-500">Configura montos mínimos de compra, política de envíos gratis y teléfonos de WhatsApp</p>
+          </div>
+        </div>
+
+        <form id="commercialSettingsForm" onsubmit="saveCommercialSettings(event)" class="space-y-5">
+          <!-- Monto Descuento Mayorista / Mínimo de compra -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="tag" class="w-4 h-4 text-amber-600"></i>
+                <span>Monto Mínimo de Compra para Descuento Mayorista / Lista 2 ($)</span>
+              </label>
+            </div>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+              <input 
+                type="number" 
+                step="500" 
+                id="settingMinPurchaseDiscount" 
+                required 
+                class="w-full bg-white border border-slate-200 pl-8 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+              />
+            </div>
+            <p class="text-[11px] text-slate-500">
+              Actualmente configurado en $50.000. Si el pedido del cliente supera este monto, se desbloquean los precios de Lista 2 (Mayorista) o el descuento del cliente en el comprobante final.
+            </p>
+          </div>
+
+          <!-- Monto Envío Gratis y Leyenda -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div>
+              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5 mb-1.5">
+                <i data-lucide="truck" class="w-4 h-4 text-sky-600"></i>
+                <span>Monto Mínimo para Envío Gratis ($)</span>
+              </label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+                <input 
+                  type="number" 
+                  step="1000" 
+                  id="settingMinPurchaseFreeShipping" 
+                  required 
+                  class="w-full bg-white border border-slate-200 pl-8 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-slate-700 block mb-1">Leyenda visible al cliente en formulario</label>
+              <input 
+                type="text" 
+                id="settingFreeShippingLegendPrefix" 
+                placeholder="El envío es gratis a partir de " 
+                class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <p class="text-[11px] text-slate-500 mt-1">Se completa automáticamente con el monto formateado: ej. "El envío es gratis a partir de $ 100.000,00"</p>
+            </div>
+          </div>
+
+          <!-- Canales de WhatsApp (Pruebas vs Oficial) -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <i data-lucide="message-circle" class="w-4 h-4 text-emerald-600"></i>
+              <span>Destino de WhatsApp para Cotizaciones</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">Número Oficial / Producción</label>
+                <input 
+                  type="text" 
+                  id="settingWhatsAppProduction" 
+                  placeholder="2616799084" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">Número para Pruebas</label>
+                <input 
+                  type="text" 
+                  id="settingWhatsAppTesting" 
+                  placeholder="2613890532" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+
+            <!-- Selector de Modo Activo -->
+            <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 mt-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                <div>
+                  <span class="text-xs font-bold text-slate-800 block">Modo de Pruebas Activo</span>
+                  <span class="text-[10px] text-slate-500">Enviar cotizaciones de clientes al número de pruebas (2613890532)</span>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingUseTestingNumber" class="sr-only peer" checked>
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-3">
+            <button type="submit" id="btnSaveCommercialSettings" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Guardar Reglas Comerciales</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ABM DE PRODUCTO (EDICIÓN Y ALTA)                  -->
+  <!-- ======================================================== -->
+  <div id="productModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 my-8">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i data-lucide="package" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="modalProductTitle" class="font-bold text-slate-900 text-base">Editar Artículo</h3>
+            <p class="text-xs text-slate-500">Modifica atributos, sube foto y asigna precios de lista</p>
+          </div>
+        </div>
+        <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="productForm" onsubmit="saveProduct(event)" class="space-y-4">
+        <input type="hidden" id="editProductId" />
+
+        <!-- Subida de Foto y Previsualización -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+          <div class="w-24 h-24 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative group">
+            <img id="imagePreview" src="" class="w-full h-full object-cover hidden" alt="Vista previa" />
+            <div id="imagePlaceholder" class="flex flex-col items-center justify-center text-slate-300">
+              <i data-lucide="image" class="w-8 h-8"></i>
+              <span class="text-[9px] font-bold text-slate-400 mt-1">Sin foto</span>
+            </div>
+          </div>
+          
+          <div class="flex-1 w-full space-y-2">
+            <label class="block text-xs font-bold text-slate-700">Foto del Producto</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <label class="cursor-pointer inline-flex items-center justify-center gap-2 bg-white border border-slate-300 hover:border-amber-500 hover:text-amber-600 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm transition">
+                <i data-lucide="upload" class="w-4 h-4 text-amber-500"></i>
+                <span>Subir archivo desde PC</span>
+                <input type="file" id="imageFileInput" accept="image/*" onchange="onFileSelected(event)" class="hidden" />
+              </label>
+              <input 
+                type="text" 
+                id="editImageUrl" 
+                placeholder="O pega una URL de imagen..." 
+                class="flex-1 text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" 
+                oninput="onUrlInput(this.value)"
+              />
+            </div>
+            <p class="text-[11px] text-slate-500">Formatos recomendados: JPG, PNG, WEBP. Se optimizará y guardará en el servidor.</p>
+          </div>
+        </div>
+
+        <!-- Título y Asistente Mágico -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-bold text-slate-700">Nombre / Título Comercial *</label>
+            <button type="button" onclick="autoDetectAttributes()" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200 transition">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+              <span>🪄 Asistente: Auto-extraer especificaciones</span>
+            </button>
+          </div>
+          <input type="text" id="editName" required placeholder="Ej: BANDEJA ALUMINIO F 100 16X23" class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-amber-500" />
+        </div>
+
+        <!-- Grid de Códigos y Categoría -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Código / SKU *</label>
+            <input type="text" id="editSku" required placeholder="Ej: 7799175002073" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Cód. Prov. / Barra</label>
+            <input type="text" id="editSupplierCode" placeholder="Ej: 7798356300327" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Rubro / Categoría *</label>
+            <select id="editCategoryId" required class="w-full text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500">
+              <!-- Categorías dinámicas -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Atributos Extraídos (Dimensiones, Capacidad, Pack, Proveedor) -->
+        <div class="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3.5 space-y-2.5">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>Especificaciones y Atributos Técnicos</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">📏 Dimensiones / Medidas</label>
+              <input type="text" id="editDimensions" placeholder="Ej: 16x23 cm, 15 cm" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">💧 Capacidad / Volumen</label>
+              <input type="text" id="editCapacity" placeholder="Ej: 500 ml, 180 cc" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">📦 Presentación / Pack</label>
+              <input type="text" id="editPackageQuantity" placeholder="Ej: x 100 U, x 50" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">🏭 Proveedor</label>
+              <input type="text" id="editSupplier" placeholder="Ej: MOYA, INPLA" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Precios y Stock -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Precio Costo ($)</label>
+            <input type="number" step="0.01" id="editCostPrice" placeholder="0.00" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">P. Venta 1 (Base / Min.) *</label>
+            <input type="number" step="0.01" id="editBasePrice" required placeholder="0.00" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-slate-900" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">P. Venta 2 (Mayorista)</label>
+            <input type="number" step="0.01" id="editWholesalePrice" placeholder="0.00" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-mono font-bold text-amber-600" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Stock Actual (u.)</label>
+            <input type="number" id="editStockUnits" placeholder="0" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+        </div>
+
+        <!-- Estado y Observaciones -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Observaciones / Notas</label>
+            <input type="text" id="editNotes" placeholder="Notas internas o aclaraciones del proveedor" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div class="flex items-center pt-5">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="editIsActive" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300" />
+              <span class="text-xs font-bold text-slate-800">Artículo Activo</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <button type="button" onclick="closeProductModal()" class="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition">
+            Cancelar
+          </button>
+          <button type="submit" id="btnSaveProduct" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md shadow-amber-500/20 transition flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Guardar Artículo</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- ======================================================== -->
+  <!-- DRAWER: COTIZADOR B2B                                    -->
+  <!-- ======================================================== -->
   <div id="quoteDrawer" class="fixed inset-0 z-50 overflow-hidden hidden">
     <!-- Backdrop -->
     <div onclick="toggleQuoteDrawer()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
     
-    <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
-      <div class="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+    <div id="quoteDrawerWrapper" class="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10 transition-all duration-300">
+      <div id="quoteDrawerPanel" class="w-screen max-w-md bg-white shadow-2xl flex flex-col h-full overflow-hidden transition-all duration-300">
         
-        <!-- Drawer Header -->
-        <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <div class="flex items-center gap-2">
-            <i data-lucide="file-spreadsheet" class="w-5 h-5 text-amber-600"></i>
-            <h2 class="text-base font-bold text-slate-900">Cotizador de Pedido B2B</h2>
+        <!-- Drawer Header (Fixed) -->
+        <div class="p-4 sm:p-5 border-b border-slate-200 bg-white shrink-0 z-10">
+          <div id="drawerHeaderInner" class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-base font-bold text-slate-900">Cotizador de Pedido B2B</h2>
+                  <span id="drawerFullscreenBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">Pantalla Completa</span>
+                </div>
+                <p class="text-[11px] text-slate-500">Revisá tus artículos y confirmá el pedido</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <!-- Botón Agrandar / Reducir Pantalla Completa -->
+              <button 
+                type="button" 
+                onclick="toggleDrawerMaximize()" 
+                id="btnMaximizeDrawer" 
+                title="Agrandar a página completa" 
+                class="text-slate-500 hover:text-slate-800 p-2 rounded-xl hover:bg-slate-100 transition flex items-center gap-1.5 text-xs font-semibold">
+                <i data-lucide="maximize-2" id="iconMaximizeDrawer" class="w-4 h-4 text-amber-600"></i>
+                <span id="textMaximizeDrawer" class="hidden sm:inline text-xs font-semibold text-slate-700">Agrandar</span>
+              </button>
+              <button 
+                type="button" 
+                onclick="toggleQuoteDrawer()" 
+                title="Cerrar panel" 
+                class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
           </div>
-          <button onclick="toggleQuoteDrawer()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
         </div>
 
-        <!-- Items List -->
-        <div class="flex-1 overflow-y-auto p-5 divide-y divide-slate-100" id="quoteItemsList">
-          <!-- Dynamic Items -->
+        <!-- Scrollable Drawer Body (Contains items, promos, totals, client form) -->
+        <div class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 bg-slate-50/70">
+          <div id="quoteDrawerGrid" class="space-y-4">
+            
+            <!-- Columna Izquierda (Artículos Solicitados) -->
+            <div id="quoteDrawerColLeft" class="space-y-4">
+              <!-- Section 1: Items List Card (Never collapses!) -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="p-3 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span>Artículos Solicitados</span>
+                  </span>
+                  <span id="drawerItemsCountBadge" class="bg-slate-200 text-slate-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full">0</span>
+                </div>
+                <div class="p-3 divide-y divide-slate-100" id="quoteItemsList">
+                  <!-- Dynamic Items -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna Derecha (Avisos, Resumen y Datos del Cliente) -->
+            <div id="quoteDrawerColRight" class="space-y-4">
+              <!-- Section 2: Promotional Notices (Descuentos & Envío Gratis) -->
+              <div class="space-y-2">
+                <!-- Descuento Mayorista / Especial por Compra Mínima ($50.000) -->
+                <div id="quoteDiscountNotice" class="p-3 rounded-xl text-xs font-semibold border flex items-center gap-2 bg-amber-50 border-amber-200 text-amber-800 shadow-xs">
+                  <i data-lucide="tag" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                  <span id="quoteDiscountNoticeText">Calculando condiciones de descuento...</span>
+                </div>
+
+                <!-- Leyenda Envío Gratis (Configurable desde Admin) -->
+                <div id="quoteShippingNotice" class="p-3 rounded-xl text-xs font-semibold border flex items-center gap-2 bg-sky-50 border-sky-200 text-sky-800 shadow-xs">
+                  <i data-lucide="truck" class="w-4 h-4 text-sky-600 shrink-0"></i>
+                  <span id="quoteShippingNoticeText">El envío es gratis a partir de $ 100.000,00</span>
+                </div>
+              </div>
+
+              <!-- Section 3: Totals Breakdown Card -->
+              <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2 text-xs">
+                <div class="font-bold text-slate-800 border-b border-slate-100 pb-1.5 flex items-center justify-between">
+                  <span>Resumen de la Cotización</span>
+                  <span class="text-[10px] font-normal text-slate-400">Precios con IVA discriminado</span>
+                </div>
+                <div class="flex justify-between text-slate-500">
+                  <span>Subtotal Lista 1 (Minorista):</span>
+                  <span id="drawerBaseSubtotal" class="font-semibold text-slate-700">$ 0,00</span>
+                </div>
+                <div id="drawerDiscountRow" class="hidden flex justify-between text-emerald-600 font-bold">
+                  <span id="drawerDiscountLabel">Descuento Mayorista:</span>
+                  <span id="drawerDiscountAmount">-$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-slate-600 pt-1 border-t border-slate-100">
+                  <span>Subtotal Neto:</span>
+                  <span id="drawerSubtotal" class="font-semibold text-slate-900">$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-slate-500">
+                  <span>IVA (21%):</span>
+                  <span id="drawerTax" class="font-semibold text-slate-700">$ 0,00</span>
+                </div>
+                <div id="drawerShippingRow" class="flex justify-between text-slate-500">
+                  <span>Envío a domicilio:</span>
+                  <span id="drawerShippingStatus" class="font-semibold text-emerald-600">A coordinar</span>
+                </div>
+                <div class="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-200">
+                  <span>Total Estimado:</span>
+                  <span id="drawerTotal" class="text-amber-600 text-base font-black">$ 0,00</span>
+                </div>
+              </div>
+
+              <!-- Section 4: Customer Details & Delivery Switch Card -->
+              <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+                <div class="font-bold text-xs text-slate-800 border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
+                  <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-600"></i>
+                  <span>Datos del Cliente y Entrega</span>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nombre o Razón Social *</label>
+                  <input 
+                    type="text" 
+                    id="quoteCustomerName" 
+                    list="specialClientsDatalist" 
+                    oninput="onCustomerNameChanged(this.value)" 
+                    placeholder="Ingresa tu nombre o empresa..." 
+                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+                  />
+                  <datalist id="specialClientsDatalist"></datalist>
+                  <div id="specialClientBadge" class="hidden mt-1 p-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200 flex items-center gap-1.5">
+                    <i data-lucide="badge-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span id="specialClientBadgeText">Cliente con descuento especial asignado</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">Dirección de entrega *</label>
+                  <input 
+                    type="text" 
+                    id="quoteCustomerAddress" 
+                    placeholder="Calle, número, localidad..." 
+                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Teléfono / WhatsApp *</label>
+                    <input type="text" id="quoteCustomerPhone" placeholder="Ej: 261..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-mono">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Email (opcional)</label>
+                    <input type="email" id="quoteCustomerEmail" placeholder="correo@ejemplo.com" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500">
+                  </div>
+                </div>
+
+                <!-- Switch de Envío -->
+                <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                      <i data-lucide="truck" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <span class="text-xs font-bold text-slate-800 block">Solicitar Envío a Domicilio</span>
+                      <span class="text-[10px] text-slate-500" id="quoteShippingSubtitle">Entrega a coordinar según zona</span>
+                    </div>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="quoteDeliveryCheck" onchange="onDeliveryToggle()" class="sr-only peer" checked>
+                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
         </div>
 
-        <!-- Drawer Footer / Summary & Actions -->
-        <div class="p-5 border-t border-slate-200 bg-slate-50 space-y-4">
-          <div class="space-y-1.5 text-xs">
-            <div class="flex justify-between text-slate-500">
-              <span>Subtotal Neto:</span>
-              <span id="drawerSubtotal" class="font-semibold text-slate-700">$0,00</span>
+        <!-- Sticky Drawer Footer (Always 100% visible on screen!) -->
+        <div class="p-3.5 sm:p-4 bg-white border-t border-slate-200 shrink-0 shadow-lg z-10">
+          <div id="drawerFooterContent" class="space-y-2.5">
+            <div class="flex items-center justify-between text-xs px-1">
+              <span class="text-slate-500 font-medium">Total a Pagar / Confirmar:</span>
+              <span id="drawerFooterTotal" class="text-amber-600 font-black text-base sm:text-lg">$ 0,00</span>
             </div>
-            <div class="flex justify-between text-slate-500">
-              <span>IVA (21%):</span>
-              <span id="drawerTax" class="font-semibold text-slate-700">$0,00</span>
-            </div>
-            <div class="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-200">
-              <span>Total Estimado:</span>
-              <span id="drawerTotal" class="text-amber-600 text-base">$0,00</span>
-            </div>
-          </div>
 
-          <!-- Customer Quick Contact Info -->
-          <div class="space-y-2 pt-2 border-t border-slate-200">
-            <input type="text" id="quoteCustomerName" placeholder="Nombre / Razón Social *" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500">
-            <div class="grid grid-cols-2 gap-2">
-              <input type="text" id="quoteCustomerPhone" placeholder="Teléfono / WhatsApp *" class="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500">
-              <input type="email" id="quoteCustomerEmail" placeholder="Email" class="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500">
+            <div class="grid grid-cols-2 gap-2 sm:min-w-[340px]">
+              <button onclick="submitQuote()" id="btnSubmitQuote" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl shadow transition-colors flex items-center justify-center gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span class="truncate">Presupuesto</span>
+              </button>
+              <button onclick="sendToWhatsApp()" id="btnWhatsApp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow transition-colors flex items-center justify-center gap-1.5">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span class="truncate">WhatsApp</span>
+              </button>
             </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="grid grid-cols-2 gap-2">
-            <button onclick="submitQuote()" id="btnSubmitQuote" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5 rounded-xl shadow transition-colors flex items-center justify-center gap-1.5">
-              <i data-lucide="check-circle" class="w-4 h-4"></i> Generar Presupuesto
-            </button>
-            <button onclick="sendToWhatsApp()" id="btnWhatsApp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2.5 rounded-xl shadow transition-colors flex items-center justify-center gap-1.5">
-              <i data-lucide="send" class="w-4 h-4"></i> Enviar por WhatsApp
-            </button>
           </div>
         </div>
 
@@ -173,7 +933,9 @@
     </div>
   </div>
 
-  <!-- Success Quote Modal -->
+  <!-- ======================================================== -->
+  <!-- MODAL: ÉXITO DE COTIZACIÓN                               -->
+  <!-- ======================================================== -->
   <div id="quoteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -192,7 +954,7 @@
       </div>
 
       <div class="bg-slate-50 rounded-xl p-4 text-xs space-y-2" id="modalQuoteDetails">
-        <!-- Details injected via JS -->
+        <!-- Inyectado dinámicamente -->
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
@@ -206,7 +968,195 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- ======================================================== -->
+  <!-- MODAL: ACCESO ADMINISTRADOR                               -->
+  <!-- ======================================================== -->
+  <div id="adminAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">Acceso de Administrador</h3>
+            <p class="text-[11px] text-slate-500">Gestión de catálogo y ABM Gasbel</p>
+          </div>
+        </div>
+        <button onclick="closeAdminAuthModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Ingresa la clave de administración para acceder a la gestión de artículos (ABM), edición de precios y herramientas técnicas.
+        </p>
+        
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Clave de Acceso</label>
+          <div class="relative">
+            <i data-lucide="key-round" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            <input 
+              type="password" 
+              id="adminPinInput" 
+              placeholder="Ingresa la clave..." 
+              onkeydown="if(event.key==='Enter') submitAdminAuth()" 
+              class="w-full bg-slate-50 border border-slate-200 pl-9 pr-10 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all shadow-sm"
+            />
+            <button type="button" onclick="togglePinVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i id="pinVisibilityIcon" data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p id="adminAuthError" class="hidden text-rose-600 text-xs font-semibold mt-1.5 flex items-center gap-1">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+            <span>Clave incorrecta. Inténtalo nuevamente.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeAdminAuthModal()" class="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition">
+          Cancelar
+        </button>
+        <button type="button" onclick="submitAdminAuth()" id="btnSubmitAdminAuth" class="px-5 py-2 bg-slate-900 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5">
+          <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+          <span>Ingresar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: CLIENTE CON DESCUENTO ESPECIAL                     -->
+  <!-- ======================================================== -->
+  <div id="specialClientModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i data-lucide="badge-percent" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="specialClientModalTitle" class="font-bold text-slate-900 text-sm">Cliente con Descuento Especial</h3>
+            <p class="text-[11px] text-slate-500">Asignar porcentaje exclusivo para cotizaciones</p>
+          </div>
+        </div>
+        <button onclick="closeSpecialClientModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="specialClientForm" onsubmit="saveSpecialClient(event)" class="space-y-3.5">
+        <input type="hidden" id="editSpecialClientId" />
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nombre / Razón Social *</label>
+          <input 
+            type="text" 
+            id="editSpecialClientName" 
+            required 
+            placeholder="Ej: Sandra Marzán, Distribuidora Cuyo..." 
+            class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Porcentaje de Descuento (% OFF) *</label>
+          <div class="relative">
+            <input 
+              type="number" 
+              id="editSpecialClientDiscount" 
+              required 
+              min="0" 
+              max="100" 
+              step="0.5" 
+              placeholder="Ej: 25 o 30" 
+              class="w-full text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl pl-3 pr-8 py-2 outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Se aplicará este descuento preferencial en su comprobante y pedido.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Teléfono / WhatsApp</label>
+            <input 
+              type="text" 
+              id="editSpecialClientPhone" 
+              placeholder="Ej: 2616799084" 
+              class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Dirección / Zona</label>
+            <input 
+              type="text" 
+              id="editSpecialClientAddress" 
+              placeholder="Ej: Guaymallén, Mendoza" 
+              class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1">Observaciones / Rubro</label>
+          <input 
+            type="text" 
+            id="editSpecialClientNotes" 
+            placeholder="Ej: Cuenta preferencial perfumería y bolsas" 
+            class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
+
+        <div class="flex items-center pt-1">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="editSpecialClientIsActive" class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300" checked />
+            <span class="text-xs font-bold text-slate-800">Cliente Activo con Beneficio Vigente</span>
+          </label>
+        </div>
+
+        <!-- Sección de Link Personalizado (visible al editar cliente) -->
+        <div id="modalClientLinkSection" class="hidden bg-amber-50/80 border border-amber-200/90 rounded-xl p-3 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px] font-bold text-amber-900">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="link" class="w-3.5 h-3.5 text-amber-600"></i>
+              <span>Enlace Exclusivo para el Cliente</span>
+            </span>
+            <button type="button" onclick="copyCurrentModalClientLink()" class="text-[10px] text-amber-700 hover:text-amber-900 font-bold underline">
+              Copiar Link
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="text" id="modalClientLinkInput" readonly class="w-full text-[11px] bg-white border border-amber-200 rounded-lg px-2.5 py-1.5 font-mono text-slate-700 outline-none select-all" />
+            <button type="button" onclick="shareCurrentModalClientWhatsApp()" title="Enviar enlace por WhatsApp" class="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg transition shrink-0">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-500">Al entrar con este enlace, verá el banner de bienvenida con su porcentaje y el catálogo calculará su descuento.</p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeSpecialClientModal()" class="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition">
+            Cancelar
+          </button>
+          <button type="submit" id="btnSaveSpecialClient" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Guardar Cliente</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300">
+    <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMessage">Operación exitosa</span>
+  </div>
+
+  <!-- App Script -->
   <script src="app.js"></script>
 </body>
 </html>

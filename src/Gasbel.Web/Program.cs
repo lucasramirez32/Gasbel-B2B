@@ -1,6 +1,7 @@
 using Gasbel.Application.Interfaces;
 using Gasbel.Application.Pricing;
 using Gasbel.Application.Quotes;
+using Gasbel.Application.Services;
 using Gasbel.Infrastructure.Persistence;
 using Gasbel.Infrastructure.Repositories;
 using Gasbel.Infrastructure.Seeders;
@@ -35,6 +36,7 @@ builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 // Application Services
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
+builder.Services.AddSingleton<ICommercialSettingsService, CommercialSettingsService>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -56,6 +58,20 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<GasbelDbContext>();
     await db.Database.EnsureCreatedAsync();
     await GasbelDataSeeder.SeedAsync(db);
+
+    // Importar y sincronizar artículos reales desde CSV si existe
+    var csvPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "articulos_gasbel.csv");
+    if (File.Exists(csvPath))
+    {
+        await GasbelCsvImporter.ImportArticlesFromCsvAsync(db, csvPath);
+    }
+}
+
+// Asegurar carpeta para subida de fotos
+var uploadsDir = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+if (!Directory.Exists(uploadsDir))
+{
+    Directory.CreateDirectory(uploadsDir);
 }
 
 app.UseCors();

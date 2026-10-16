@@ -110,3 +110,46 @@ ELSE:
   1. Resumen de pedido con desglose de ítems, cantidades, tipo de empaque (paquetes vs. bultos), precio unitario aplicado, subtotales y total general.
   2. Posibilidad de descargar o imprimir la cotización en formato orden de pedido.
   3. Opción para enviar el pedido vía WhatsApp / Email directamente a ventas de Gasbel.
+
+---
+
+## 6. Requerimientos Comerciales Dinámicos y Panel Administrativo (Reunión Octubre 2026)
+
+### 6.1. Indicadores de Stock y Acción de Compra en Catálogo
+- Se elimina la visualización de cantidades numéricas de stock para usuarios finales.
+- Se implementa un indicador visual simplificado:
+  - **Verde ("Hay stock")**: Si `StockUnits > 0`.
+  - **Gris ("Sin stock")**: Si `StockUnits == 0`.
+- El cliente puede añadir artículos y cotizar independientemente de la disponibilidad actual.
+- El botón de acción de cada tarjeta se estandariza con el texto **"Añadir"**.
+
+### 6.2. Reglas Comerciales Dinámicas y Umbrales Configurables
+Desde la pestaña de administración **Reglas Comerciales & WhatsApp**, el administrador puede configurar:
+1. **Compra Mínima para Descuento Mayorista (Lista 2)**:
+   - Valor inicial: **$ 50.000,00 ARS**.
+   - Si el pedido supera este monto, se desbloquean los precios mayoristas o el descuento específico en el comprobante final.
+2. **Compra Mínima para Envío Gratis y Leyenda Personalizada**:
+   - Valor inicial: **$ 100.000,00 ARS**.
+   - Leyenda personalizable (ej. *"El envío es gratis a partir de "*).
+3. **Enrutamiento y Modo de Pruebas de WhatsApp**:
+   - Número de pruebas: `2613890532`.
+   - Número de producción: `2616799084`.
+   - Switch de activación de modo de pruebas para alternar el destino de las cotizaciones emitidas.
+
+### 6.3. Clientes con Descuento Especial y Enlaces Personalizados
+- **Grilla y ABM Administrativo**: Gestión de clientes con porcentaje preferencial exclusivo (ej: 25%, 30%).
+- **Enlaces de Acceso Personalizados (`?cliente={id}`)**:
+  - Cada cliente cuenta con un enlace exclusivo generado desde la grilla administrativa.
+  - Botón de copiado con un clic y botón de envío directo con mensaje redactado por WhatsApp.
+- **Experiencia del Cliente con Enlace**:
+  - Detección automática al cargar la plataforma.
+  - Banner VIP de bienvenida destacando su beneficio exclusivo.
+  - En cada tarjeta de producto se visualiza su precio final con el descuento aplicado.
+  - Pre-llenado de datos del cliente (nombre, dirección, teléfono) en el formulario de cotización.
+
+### 6.4. Rediseño del Cotizador Lateral (Drawer) y Modo Pantalla Completa
+- Estructura vertical con scroll independiente (`flex-1 min-h-0 overflow-y-auto`) para evitar colapsos visuales.
+- **Sticky Footer Fijo**: Barra inferior con total a pagar y botones de **"Presupuesto"** y **"WhatsApp"** siempre visibles.
+- **Modo Pantalla Completa**: Botón de maximizar (`maximize-2` / `minimize-2`) que expande el panel a pantalla completa en 2 columnas (artículos a la izquierda, formulario y totales a la derecha).
+- Formulario de entrega integrado con dirección, switch de envío a domicilio y notas.
+

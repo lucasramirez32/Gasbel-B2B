@@ -63,7 +63,9 @@ public class GasbelDbContext : DbContext
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Sku).IsRequired().HasMaxLength(50);
             entity.Property(p => p.Name).IsRequired().HasMaxLength(250);
+            entity.Property(p => p.CostPrice).HasPrecision(18, 2);
             entity.Property(p => p.BasePrice).HasPrecision(18, 2);
+            entity.Property(p => p.WholesalePrice).HasPrecision(18, 2);
             entity.HasIndex(p => p.Sku).IsUnique();
             entity.HasIndex(p => p.CategoryId);
 
