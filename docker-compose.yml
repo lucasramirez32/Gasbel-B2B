@@ -11,3 +11,12 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - DatabaseProvider=Sqlite
+    networks:
+      - default
+      - foyke_net
+
+networks:
+  default:
+  foyke_net:
+    external: true
+    name: docker_foyke-network
