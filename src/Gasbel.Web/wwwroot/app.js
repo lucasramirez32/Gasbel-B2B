@@ -205,9 +205,79 @@ function logoutAdmin() {
   showToast('Sesión de administración cerrada');
 }
 
+// ==========================================
+// 0.1. PERSISTENCIA DE CARRITO (LOCALSTORAGE)
+// ==========================================
+const STORAGE_CART_KEY = 'gasbel_b2b_cart_items';
+const STORAGE_CUSTOMER_KEY = 'gasbel_b2b_customer_data';
+
+function saveCartToStorage() {
+  try {
+    localStorage.setItem(STORAGE_CART_KEY, JSON.stringify(quoteItems));
+    const customerData = {
+      name: document.getElementById('quoteCustomerName')?.value || '',
+      address: document.getElementById('quoteCustomerAddress')?.value || '',
+      phone: document.getElementById('quoteCustomerPhone')?.value || '',
+      email: document.getElementById('quoteCustomerEmail')?.value || '',
+      isDelivery: document.getElementById('quoteDeliveryCheck')?.checked ?? true
+    };
+    localStorage.setItem(STORAGE_CUSTOMER_KEY, JSON.stringify(customerData));
+  } catch (e) {
+    console.error('Error al guardar carrito en localStorage:', e);
+  }
+}
+
+function loadCartFromStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_CART_KEY);
+    if (saved) {
+      quoteItems = JSON.parse(saved) || [];
+    }
+    const savedCustomer = localStorage.getItem(STORAGE_CUSTOMER_KEY);
+    if (savedCustomer) {
+      const data = JSON.parse(savedCustomer);
+      const nameInput = document.getElementById('quoteCustomerName');
+      const addrInput = document.getElementById('quoteCustomerAddress');
+      const phoneInput = document.getElementById('quoteCustomerPhone');
+      const emailInput = document.getElementById('quoteCustomerEmail');
+      const deliveryCheck = document.getElementById('quoteDeliveryCheck');
+
+      if (nameInput && !nameInput.value && data.name) nameInput.value = data.name;
+      if (addrInput && !addrInput.value && data.address) addrInput.value = data.address;
+      if (phoneInput && !phoneInput.value && data.phone) phoneInput.value = data.phone;
+      if (emailInput && !emailInput.value && data.email) emailInput.value = data.email;
+      if (deliveryCheck && data.isDelivery !== undefined) deliveryCheck.checked = data.isDelivery;
+    }
+  } catch (e) {
+    console.error('Error al recuperar carrito de localStorage:', e);
+  }
+}
+
+function clearCart() {
+  quoteItems = [];
+  try {
+    localStorage.removeItem(STORAGE_CART_KEY);
+  } catch (e) {}
+  updateCartBadge();
+  renderQuoteDrawer();
+  renderProductGrid();
+  showToast('Cotización vaciada');
+}
+
+function confirmClearCart() {
+  if (quoteItems.length === 0) {
+    showToast('La cotización ya está vacía');
+    return;
+  }
+  if (confirm('¿Deseas vaciar todos los artículos de la cotización actual e iniciar un pedido nuevo?')) {
+    clearCart();
+  }
+}
+
 // Init App
 document.addEventListener('DOMContentLoaded', async () => {
   initAdminAuth();
+  loadCartFromStorage();
   await Promise.all([
     loadCommercialSettings(),
     loadSpecialClients(),
@@ -220,6 +290,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadProducts(),
     loadAdminStats()
   ]);
+  updateCartBadge();
+  renderQuoteDrawer();
   lucide.createIcons();
 });
 
@@ -570,6 +642,9 @@ function renderProductGrid() {
       };
     }
 
+    const inQuoteItem = quoteItems.find(it => it.product.id === p.id);
+    const inQuoteUnits = inQuoteItem ? (inQuoteItem.effectiveUnits || inQuoteItem.quantity) : 0;
+
     const sel = productSelections[p.id];
     const isBox = sel.packaging === 'Box';
     const effectiveUnits = isBox ? sel.quantity * p.unitsPerBox : sel.quantity;
@@ -577,7 +652,7 @@ function renderProductGrid() {
 
     const card = document.createElement('div');
     card.id = `product-card-${p.id}`;
-    card.className = "bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group";
+    card.className = `bg-white rounded-2xl border ${inQuoteUnits > 0 ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-md' : 'border-slate-200/80 shadow-sm'} hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group`;
 
     card.innerHTML = `
       <!-- Product Image / Visual Placeholder -->
@@ -596,6 +671,14 @@ function renderProductGrid() {
           <span class="w-2 h-2 rounded-full ${p.stockUnits > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
           <span>${p.stockUnits > 0 ? 'Hay stock' : 'Sin stock'}</span>
         </span>
+
+        ${inQuoteUnits > 0 ? `
+          <!-- Badge: Ya agregado en el pedido -->
+          <span class="absolute top-2.5 left-2.5 inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full shadow-md bg-amber-500 text-white border border-amber-400">
+            <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+            <span>En pedido: ${inQuoteUnits} u.</span>
+          </span>
+        ` : ''}
 
         <!-- Supplier tag if available -->
         ${p.supplier ? `
@@ -688,9 +771,9 @@ function renderProductGrid() {
               <button onclick="adjustQuantity('${p.id}', 1)" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-white active:bg-slate-200 transition font-bold text-sm">+</button>
             </div>
 
-            <button onclick="addToQuote('${p.id}')" class="flex-1 bg-slate-900 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>Añadir</span>
+            <button onclick="addToQuote('${p.id}')" class="flex-1 ${inQuoteUnits > 0 ? 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700' : 'bg-slate-900 hover:bg-amber-600 active:bg-amber-700'} text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5">
+              <i data-lucide="${inQuoteUnits > 0 ? 'plus-circle' : 'plus'}" class="w-3.5 h-3.5"></i>
+              <span>${inQuoteUnits > 0 ? 'Sumar más' : 'Añadir'}</span>
             </button>
           </div>
         </div>
@@ -1493,9 +1576,11 @@ function addToQuote(productId) {
     });
   }
 
+  saveCartToStorage();
   updateCartBadge();
   showToast(`Añadido al pedido: ${p.name}`);
   renderQuoteDrawer();
+  renderProductGrid();
 }
 
 function updateCartBadge() {
@@ -1513,6 +1598,7 @@ function recalculateQuoteItems() {
     item.lineSubtotal = Math.round(item.unitPrice * item.effectiveUnits * 100) / 100;
     item.lineWholesaleSubtotal = Math.round(item.wholesalePrice * item.effectiveUnits * 100) / 100;
   });
+  saveCartToStorage();
   renderQuoteDrawer();
 }
 
@@ -1562,8 +1648,10 @@ function renderQuoteDrawer() {
 
 function removeQuoteItem(index) {
   quoteItems.splice(index, 1);
+  saveCartToStorage();
   updateCartBadge();
   renderQuoteDrawer();
+  renderProductGrid();
 }
 
 function updateDrawerTotals() {
@@ -1762,8 +1850,7 @@ async function submitQuote() {
         tax: tax,
         finalTotal: total
       });
-      quoteItems = [];
-      updateCartBadge();
+      clearCart();
     } else {
       showToast('Error al generar la cotización', false);
     }
@@ -1834,6 +1921,13 @@ function closeQuoteModal() {
   document.getElementById('quoteModal').classList.add('hidden');
 }
 
+let lastWhatsAppUrl = "";
+let lastWhatsAppText = "";
+
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+}
+
 // Enviar Cotización por WhatsApp con enrutamiento de número
 function sendToWhatsApp() {
   if (quoteItems.length === 0) {
@@ -1852,6 +1946,9 @@ function sendToWhatsApp() {
     document.getElementById('quoteCustomerAddress')?.focus();
     return;
   }
+
+  // Guardar datos del cliente en localStorage
+  saveCartToStorage();
 
   const baseSubtotal = quoteItems.reduce((acc, item) => acc + item.lineSubtotal, 0);
   const wholesaleSubtotal = quoteItems.reduce((acc, item) => acc + item.lineWholesaleSubtotal, 0);
@@ -1906,6 +2003,8 @@ function sendToWhatsApp() {
   text += `------------------------------------\n\n`;
   text += `_Cotización emitida desde el Catálogo B2B Gasbel._`;
 
+  lastWhatsAppText = text;
+
   // Número de WhatsApp configurado según modo (Pruebas vs Oficial)
   const targetNumber = commercialSettings.useTestingNumber 
     ? (commercialSettings.whatsAppTesting || "2613890532") 
@@ -1919,8 +2018,60 @@ function sendToWhatsApp() {
     formattedNumber = '549' + formattedNumber.substring(2);
   }
 
-  const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank');
+  const encodedText = encodeURIComponent(text);
+  const waUrl = `https://api.whatsapp.com/send?phone=${formattedNumber}&text=${encodedText}`;
+  lastWhatsAppUrl = waUrl;
+
+  if (isMobileDevice()) {
+    // En celular/tablet: abrir WhatsApp directamente
+    window.location.href = waUrl;
+  } else {
+    // En computadora (PC / Mac):
+    // 1. Abrir WhatsApp Web en pestaña nueva
+    window.open(waUrl, '_blank');
+    // 2. Abrir modal de asistencia con código QR y opción de copiar texto
+    openWhatsappAssistModal(name, total, waUrl);
+  }
+}
+
+function openWhatsappAssistModal(customerName, total, waUrl) {
+  const modal = document.getElementById('whatsappAssistModal');
+  const nameEl = document.getElementById('waModalCustomerName');
+  const totalEl = document.getElementById('waModalTotal');
+  const qrImg = document.getElementById('waQrCodeImg');
+
+  if (nameEl) nameEl.textContent = customerName;
+  if (totalEl) totalEl.textContent = formatCurrency(total);
+  if (qrImg) {
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(waUrl)}`;
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    lucide.createIcons();
+  }
+}
+
+function closeWhatsappAssistModal() {
+  const modal = document.getElementById('whatsappAssistModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function reopenWhatsAppWeb() {
+  if (lastWhatsAppUrl) {
+    window.open(lastWhatsAppUrl, '_blank');
+  }
+}
+
+function copyQuoteWhatsAppText() {
+  if (!lastWhatsAppText) return;
+  copyTextToClipboard(lastWhatsAppText, '¡Texto de la cotización copiado al portapapeles!');
+}
+
+function clearCartAndCloseModal() {
+  clearCart();
+  closeWhatsappAssistModal();
+  toggleQuoteDrawer();
 }
 
 // ==========================================
