@@ -5,6 +5,7 @@ using Gasbel.Application.Services;
 using Gasbel.Infrastructure.Persistence;
 using Gasbel.Infrastructure.Repositories;
 using Gasbel.Infrastructure.Seeders;
+using Gasbel.Infrastructure.Services;
 using Gasbel.Web.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -33,10 +34,12 @@ builder.Services.AddDbContext<GasbelDbContext>(options =>
 builder.Services.AddScoped<ICatalogRepository, CatalogRepository>();
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
 
-// Application Services
+// Application & Infrastructure Services
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddSingleton<ICommercialSettingsService, CommercialSettingsService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // CORS
 builder.Services.AddCors(options =>

@@ -2022,6 +2022,30 @@ function sendToWhatsApp() {
   const waUrl = `https://api.whatsapp.com/send?phone=${formattedNumber}&text=${encodedText}`;
   lastWhatsAppUrl = waUrl;
 
+  // Registrar cotización en el sistema y disparar envío de emails institucionales (Gasbel + Cliente)
+  try {
+    const quotePayload = {
+      customerId: currentSpecialClient?.id || selectedCustomerId || null,
+      customerGroupId: selectedGroupId || null,
+      customerName: name,
+      customerPhone: phone,
+      customerEmail: email,
+      notes: `Dirección: ${address || 'No informada'} | Envío: ${isDelivery ? 'Sí' : 'No'} (${shippingStatus}) | ${discountLabel}: -${formatCurrency(discountAmount)}`,
+      items: quoteItems.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        packagingSelected: item.packagingSelected
+      }))
+    };
+    fetch(`${API_BASE}/quotes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quotePayload)
+    }).catch(err => console.warn('Disparo silencioso de cotización:', err));
+  } catch (err) {
+    console.warn('Error silencioso al registrar cotización previa a WhatsApp:', err);
+  }
+
   if (isMobileDevice()) {
     // En celular/tablet: abrir WhatsApp directamente
     window.location.href = waUrl;
@@ -2420,12 +2444,26 @@ function populateCommercialSettingsForm() {
   const testPhoneInput = document.getElementById('settingWhatsAppTesting');
   const useTestCheck = document.getElementById('settingUseTestingNumber');
 
-  if (minDiscInput) minDiscInput.value = commercialSettings.minPurchaseForDiscount;
-  if (minShipInput) minShipInput.value = commercialSettings.minPurchaseForFreeShipping;
-  if (legendInput) legendInput.value = commercialSettings.freeShippingLegendPrefix;
-  if (prodPhoneInput) prodPhoneInput.value = commercialSettings.whatsAppProduction;
-  if (testPhoneInput) testPhoneInput.value = commercialSettings.whatsAppTesting;
-  if (useTestCheck) useTestCheck.checked = commercialSettings.useTestingNumber;
+  const notifEmailInput = document.getElementById('settingNotificationEmail');
+  const senderEmailInput = document.getElementById('settingSenderEmail');
+  const senderNameInput = document.getElementById('settingSenderName');
+  const resendKeyInput = document.getElementById('settingResendApiKey');
+  const sendBizCheck = document.getElementById('settingSendEmailToBusiness');
+  const sendCustCheck = document.getElementById('settingSendEmailToCustomer');
+
+  if (minDiscInput) minDiscInput.value = commercialSettings.minPurchaseForDiscount ?? 50000;
+  if (minShipInput) minShipInput.value = commercialSettings.minPurchaseForFreeShipping ?? 100000;
+  if (legendInput) legendInput.value = commercialSettings.freeShippingLegendPrefix ?? "El envío es gratis a partir de ";
+  if (prodPhoneInput) prodPhoneInput.value = commercialSettings.whatsAppProduction ?? "2616799084";
+  if (testPhoneInput) testPhoneInput.value = commercialSettings.whatsAppTesting ?? "2613890532";
+  if (useTestCheck) useTestCheck.checked = commercialSettings.useTestingNumber ?? true;
+
+  if (notifEmailInput) notifEmailInput.value = commercialSettings.notificationEmail ?? "pedidos@gasbel.com.ar";
+  if (senderEmailInput) senderEmailInput.value = commercialSettings.senderEmail ?? "cotizaciones@gasbel.com.ar";
+  if (senderNameInput) senderNameInput.value = commercialSettings.senderName ?? "Gasbel Descartables y Perfumería";
+  if (resendKeyInput) resendKeyInput.value = commercialSettings.resendApiKey ?? "";
+  if (sendBizCheck) sendBizCheck.checked = commercialSettings.sendEmailToBusiness ?? true;
+  if (sendCustCheck) sendCustCheck.checked = commercialSettings.sendEmailToCustomer ?? true;
 }
 
 async function saveCommercialSettings(e) {
@@ -2438,13 +2476,26 @@ async function saveCommercialSettings(e) {
   const whatsAppTesting = document.getElementById('settingWhatsAppTesting').value.trim() || "2613890532";
   const useTestingNumber = document.getElementById('settingUseTestingNumber').checked;
 
+  const notificationEmail = document.getElementById('settingNotificationEmail')?.value.trim() || "pedidos@gasbel.com.ar";
+  const senderEmail = document.getElementById('settingSenderEmail')?.value.trim() || "cotizaciones@gasbel.com.ar";
+  const senderName = document.getElementById('settingSenderName')?.value.trim() || "Gasbel Descartables y Perfumería";
+  const resendApiKey = document.getElementById('settingResendApiKey')?.value.trim() || "";
+  const sendEmailToBusiness = document.getElementById('settingSendEmailToBusiness')?.checked ?? true;
+  const sendEmailToCustomer = document.getElementById('settingSendEmailToCustomer')?.checked ?? true;
+
   const payload = {
     minPurchaseForDiscount,
     minPurchaseForFreeShipping,
     freeShippingLegendPrefix,
     whatsAppProduction,
     whatsAppTesting,
-    useTestingNumber
+    useTestingNumber,
+    notificationEmail,
+    senderEmail,
+    senderName,
+    resendApiKey,
+    sendEmailToBusiness,
+    sendEmailToCustomer
   };
 
   try {

@@ -549,6 +549,89 @@
             </div>
           </div>
 
+          <!-- Canales de Email Institucional (@gasbel.com.ar) -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="text-xs font-bold text-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="mail" class="w-4 h-4 text-blue-600"></i>
+                <span>Notificaciones por Correo Electrónico Institucional</span>
+              </div>
+              <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">Automático</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">Email de Recepción Gasbel (Comercio)</label>
+                <input 
+                  type="email" 
+                  id="settingNotificationEmail" 
+                  placeholder="pedidos@gasbel.com.ar" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <p class="text-[10px] text-slate-500 mt-0.5">Casilla donde Gasbel recibe la copia de cada cotización</p>
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">Email Remitente (@gasbel.com.ar)</label>
+                <input 
+                  type="email" 
+                  id="settingSenderEmail" 
+                  placeholder="cotizaciones@gasbel.com.ar" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <p class="text-[10px] text-slate-500 mt-0.5">Dirección institucional desde la cual se envían los correos</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">Nombre del Remitente</label>
+                <input 
+                  type="text" 
+                  id="settingSenderName" 
+                  placeholder="Gasbel Descartables y Perfumería" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600 block mb-1">API Key Resend (Opcional)</label>
+                <input 
+                  type="password" 
+                  id="settingResendApiKey" 
+                  placeholder="re_xxxxxxxxxxxxxx" 
+                  class="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <p class="text-[10px] text-slate-500 mt-0.5">Clave de resend.com. Si está vacía se simula y guarda en data/emails/</p>
+              </div>
+            </div>
+
+            <!-- Switches de Notificación -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200">
+                <div>
+                  <span class="text-xs font-bold text-slate-800 block">Notificar a la Empresa</span>
+                  <span class="text-[10px] text-slate-500">Enviar correo a pedidos@gasbel.com.ar</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="settingSendEmailToBusiness" class="sr-only peer" checked>
+                  <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200">
+                <div>
+                  <span class="text-xs font-bold text-slate-800 block">Comprobante al Cliente</span>
+                  <span class="text-[10px] text-slate-500">Enviar copia al email que el cliente indique</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="settingSendEmailToCustomer" class="sr-only peer" checked>
+                  <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div class="flex justify-end pt-3">
             <button type="submit" id="btnSaveCommercialSettings" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5">
               <i data-lucide="check" class="w-4 h-4"></i>

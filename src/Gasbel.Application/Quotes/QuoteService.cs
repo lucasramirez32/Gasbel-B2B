@@ -1,6 +1,7 @@
 using Gasbel.Application.DTOs;
 using Gasbel.Application.Interfaces;
 using Gasbel.Application.Pricing;
+using Gasbel.Application.Services;
 using Gasbel.Domain.Entities;
 
 namespace Gasbel.Application.Quotes;
@@ -16,15 +17,21 @@ public class QuoteService : IQuoteService
     private readonly IQuoteRepository _quoteRepository;
     private readonly ICatalogRepository _catalogRepository;
     private readonly IPricingService _pricingService;
+    private readonly IEmailService? _emailService;
+    private readonly ICommercialSettingsService? _commercialSettingsService;
 
     public QuoteService(
         IQuoteRepository quoteRepository,
         ICatalogRepository catalogRepository,
-        IPricingService pricingService)
+        IPricingService pricingService,
+        IEmailService? emailService = null,
+        ICommercialSettingsService? commercialSettingsService = null)
     {
         _quoteRepository = quoteRepository;
         _catalogRepository = catalogRepository;
         _pricingService = pricingService;
+        _emailService = emailService;
+        _commercialSettingsService = commercialSettingsService;
     }
 
     public async Task<QuoteResponseDto> CreateQuoteAsync(CreateQuoteRequest request, CancellationToken cancellationToken = default)
@@ -73,6 +80,7 @@ public class QuoteService : IQuoteService
                 Id = Guid.NewGuid(),
                 QuoteId = quote.Id,
                 ProductId = product.Id,
+                Product = product,
                 Quantity = finalQuantity,
                 PackagingSelected = itemReq.PackagingSelected,
                 AppliedUnitPrice = pricingResult.UnitPrice,
@@ -90,6 +98,30 @@ public class QuoteService : IQuoteService
         quote.Total = Math.Round(quote.Subtotal + quote.TaxAmount, 2);
 
         await _quoteRepository.CreateQuoteAsync(quote, cancellationToken);
+
+        // Disparo de notificaciones por email en segundo plano (Gasbel + Cliente)
+        if (_emailService != null && _commercialSettingsService != null)
+        {
+            try
+            {
+                var settings = await _commercialSettingsService.GetSettingsAsync(cancellationToken);
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailService.SendQuoteEmailsAsync(quote, settings, CancellationToken.None);
+                    }
+                    catch
+                    {
+                        // Excepciones internas ya registradas en EmailService
+                    }
+                });
+            }
+            catch
+            {
+                // Mecanismo a prueba de fallos: la creación de la cotización nunca se interrumpe
+            }
+        }
 
         return MapToDto(quote, products);
     }
