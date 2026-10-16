@@ -1,0 +1,13 @@
+services:
+  gasbel-web:
+    build: .
+    container_name: gasbel-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5050:8080"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/wwwroot/uploads
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DatabaseProvider=Sqlite
