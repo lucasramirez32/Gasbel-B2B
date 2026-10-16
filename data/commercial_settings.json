@@ -1,8 +1,0 @@
-{
-  "MinPurchaseForDiscount": 50000,
-  "MinPurchaseForFreeShipping": 100000,
-  "WhatsAppProduction": "2616799084",
-  "WhatsAppTesting": "2613890532",
-  "UseTestingNumber": true,
-  "FreeShippingLegendPrefix": "El env\u00EDo es gratis a partir de "
-}

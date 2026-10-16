@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Gasbel.Application.Interfaces;
 using Gasbel.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Gasbel.Infrastructure.Services;
@@ -12,12 +13,14 @@ namespace Gasbel.Infrastructure.Services;
 public class EmailService : IEmailService
 {
     private readonly HttpClient _httpClient;
+    private readonly IConfiguration? _configuration;
     private readonly ILogger<EmailService> _logger;
 
-    public EmailService(HttpClient httpClient, ILogger<EmailService> logger)
+    public EmailService(HttpClient httpClient, ILogger<EmailService> logger, IConfiguration? configuration = null)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public async Task<EmailDispatchResult> SendQuoteEmailsAsync(
@@ -115,7 +118,9 @@ public class EmailService : IEmailService
     {
         var apiKey = !string.IsNullOrWhiteSpace(settings.ResendApiKey)
             ? settings.ResendApiKey
-            : Environment.GetEnvironmentVariable("RESEND_API_KEY");
+            : (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RESEND_API_KEY"))
+                ? Environment.GetEnvironmentVariable("RESEND_API_KEY")
+                : _configuration?["Resend:ApiKey"]);
 
         // Modo Resend API
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -146,6 +151,31 @@ public class EmailService : IEmailService
                 }
 
                 var errorText = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                // Si el dominio gasbel.com.ar aún no completó la verificación DNS en Resend,
+                // intentamos automáticamente con el remitente de prueba oficial (onboarding@resend.dev)
+                if ((errorText.Contains("not verified", StringComparison.OrdinalIgnoreCase) || errorText.Contains("validation_error", StringComparison.OrdinalIgnoreCase))
+                    && !fromAddress.Contains("resend.dev", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("Dominio aún no verificado en Resend. Reintentando con onboarding@resend.dev para pruebas...");
+                    using var retryRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+                    retryRequest.Headers.Add("Authorization", $"Bearer {apiKey}");
+                    var retryPayload = new
+                    {
+                        from = $"{fromName} <onboarding@resend.dev>",
+                        to = new[] { toEmail },
+                        subject = subject,
+                        html = htmlBody
+                    };
+                    retryRequest.Content = new StringContent(JsonSerializer.Serialize(retryPayload), Encoding.UTF8, "application/json");
+                    var retryResponse = await _httpClient.SendAsync(retryRequest, cancellationToken);
+                    if (retryResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogInformation("Correo de prueba entregado con éxito vía onboarding@resend.dev a {Recipient}", toEmail);
+                        return (true, null);
+                    }
+                }
+
                 _logger.LogWarning("Error en Resend API ({StatusCode}): {Error}", response.StatusCode, errorText);
                 return (false, $"Resend ({response.StatusCode}): {errorText}");
             }

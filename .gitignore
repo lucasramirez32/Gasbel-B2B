@@ -33,3 +33,8 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Runtime data & secrets
+data/commercial_settings.json
+data/special_clients.json
+data/emails/
