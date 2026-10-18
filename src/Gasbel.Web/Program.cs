@@ -12,6 +12,12 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// JSON Serialization Configuration
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
+
 // Database configuration
 var provider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
 var connectionString = provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase)

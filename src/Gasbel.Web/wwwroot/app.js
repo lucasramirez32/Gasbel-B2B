@@ -1363,10 +1363,13 @@ async function saveProduct(event) {
       if (pendingUploadFile && targetId) {
         const formData = new FormData();
         formData.append('file', pendingUploadFile);
-        await fetch(`${API_BASE}/admin/products/${targetId}/image`, {
+        const imgRes = await fetch(`${API_BASE}/admin/products/${targetId}/image`, {
           method: 'POST',
           body: formData
         });
+        if (!imgRes.ok) {
+          showToast('Artículo guardado, pero ocurrió un problema al subir la foto.', false);
+        }
       }
 
       closeProductModal();

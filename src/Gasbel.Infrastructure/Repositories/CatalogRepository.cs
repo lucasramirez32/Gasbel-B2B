@@ -162,7 +162,10 @@ public class CatalogRepository : ICatalogRepository
 
     public async Task<Product> UpdateProductAsync(Product product, CancellationToken cancellationToken = default)
     {
-        _dbContext.Products.Update(product);
+        if (_dbContext.Entry(product).State == EntityState.Detached)
+        {
+            _dbContext.Products.Update(product);
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
         return product;
     }

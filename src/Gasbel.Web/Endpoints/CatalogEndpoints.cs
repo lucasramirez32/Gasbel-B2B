@@ -239,7 +239,27 @@ public static class CatalogEndpoints
             };
 
             await catalogRepo.AddProductAsync(product, ct);
-            return Results.Created($"/api/products/{product.Id}", product);
+            return Results.Created($"/api/products/{product.Id}", new
+            {
+                product.Id,
+                product.CategoryId,
+                product.Sku,
+                product.SupplierCode,
+                product.Name,
+                product.Description,
+                product.Dimensions,
+                product.Capacity,
+                product.PackageQuantity,
+                product.Supplier,
+                product.Notes,
+                product.UnitsPerBox,
+                product.CostPrice,
+                product.BasePrice,
+                product.WholesalePrice,
+                product.StockUnits,
+                product.IsActive,
+                product.ImageUrl
+            });
         })
         .WithName("CreateProduct")
         .WithSummary("Crea un nuevo producto en el catálogo");
@@ -257,10 +277,14 @@ public static class CatalogEndpoints
                 return Results.NotFound(new { Message = "Producto no encontrado." });
             }
 
-            product.CategoryId = req.CategoryId;
-            product.Sku = req.Sku.Trim();
+            if (product.CategoryId != req.CategoryId)
+            {
+                product.CategoryId = req.CategoryId;
+                product.Category = null!;
+            }
+            product.Sku = req.Sku?.Trim() ?? string.Empty;
             product.SupplierCode = req.SupplierCode?.Trim();
-            product.Name = req.Name.Trim();
+            product.Name = req.Name?.Trim() ?? string.Empty;
             product.Description = req.Description ?? string.Empty;
             product.Dimensions = req.Dimensions?.Trim();
             product.Capacity = req.Capacity?.Trim();
@@ -279,7 +303,27 @@ public static class CatalogEndpoints
             }
 
             await catalogRepo.UpdateProductAsync(product, ct);
-            return Results.Ok(product);
+            return Results.Ok(new
+            {
+                product.Id,
+                product.CategoryId,
+                product.Sku,
+                product.SupplierCode,
+                product.Name,
+                product.Description,
+                product.Dimensions,
+                product.Capacity,
+                product.PackageQuantity,
+                product.Supplier,
+                product.Notes,
+                product.UnitsPerBox,
+                product.CostPrice,
+                product.BasePrice,
+                product.WholesalePrice,
+                product.StockUnits,
+                product.IsActive,
+                product.ImageUrl
+            });
         })
         .WithName("UpdateProduct")
         .WithSummary("Actualiza los atributos, medidas, precios y estado de un producto");
