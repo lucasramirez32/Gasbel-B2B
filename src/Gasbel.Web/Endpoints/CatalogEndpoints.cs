@@ -209,6 +209,8 @@ public static class CatalogEndpoints
         group.MapPost("/admin/products", async (
             [FromBody] CreateProductRequest req,
             ICatalogRepository catalogRepo,
+            IHttpClientFactory httpClientFactory,
+            IWebHostEnvironment env,
             CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(req.Sku) || string.IsNullOrWhiteSpace(req.Name))
@@ -216,9 +218,21 @@ public static class CatalogEndpoints
                 return Results.BadRequest(new { Message = "El SKU y el Nombre son obligatorios." });
             }
 
+            var productId = Guid.NewGuid();
+            string? finalImageUrl = req.ImageUrl?.Trim();
+            if (!string.IsNullOrWhiteSpace(finalImageUrl) && 
+                (finalImageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || finalImageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+            {
+                var downloaded = await DownloadAndSaveProductImageAsync(productId, finalImageUrl, httpClientFactory, env, ct);
+                if (!string.IsNullOrWhiteSpace(downloaded))
+                {
+                    finalImageUrl = downloaded;
+                }
+            }
+
             var product = new Product
             {
-                Id = Guid.NewGuid(),
+                Id = productId,
                 CategoryId = req.CategoryId,
                 Sku = req.Sku.Trim(),
                 SupplierCode = req.SupplierCode?.Trim(),
@@ -235,7 +249,7 @@ public static class CatalogEndpoints
                 WholesalePrice = req.WholesalePrice > 0 ? req.WholesalePrice : req.BasePrice,
                 StockUnits = req.StockUnits,
                 IsActive = req.IsActive,
-                ImageUrl = req.ImageUrl
+                ImageUrl = finalImageUrl
             };
 
             await catalogRepo.AddProductAsync(product, ct);
@@ -269,6 +283,8 @@ public static class CatalogEndpoints
             Guid id,
             [FromBody] UpdateProductRequest req,
             ICatalogRepository catalogRepo,
+            IHttpClientFactory httpClientFactory,
+            IWebHostEnvironment env,
             CancellationToken ct) =>
         {
             var product = await catalogRepo.GetProductByIdAsync(id, ct);
@@ -299,7 +315,16 @@ public static class CatalogEndpoints
             product.IsActive = req.IsActive;
             if (!string.IsNullOrWhiteSpace(req.ImageUrl))
             {
-                product.ImageUrl = req.ImageUrl;
+                var imgUrl = req.ImageUrl.Trim();
+                if (imgUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || imgUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var downloaded = await DownloadAndSaveProductImageAsync(product.Id, imgUrl, httpClientFactory, env, ct);
+                    product.ImageUrl = downloaded ?? imgUrl;
+                }
+                else
+                {
+                    product.ImageUrl = imgUrl;
+                }
             }
 
             await catalogRepo.UpdateProductAsync(product, ct);
@@ -543,6 +568,62 @@ public static class CatalogEndpoints
             p.ImageUrl,
             tiers
         );
+    }
+
+    private static async Task<string?> DownloadAndSaveProductImageAsync(
+        Guid productId,
+        string url,
+        IHttpClientFactory httpClientFactory,
+        IWebHostEnvironment env,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+
+            url = url.Trim();
+            // Soporte para links de repositorios GitHub
+            if (url.Contains("github.com", StringComparison.OrdinalIgnoreCase) && url.Contains("/blob/", StringComparison.OrdinalIgnoreCase))
+            {
+                url = url.Replace("github.com", "raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase)
+                         .Replace("/blob/", "/", StringComparison.OrdinalIgnoreCase);
+            }
+
+            var client = httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gasbel/1.0");
+
+            using var response = await client.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "";
+            string ext = ".jpg";
+            if (contentType.Contains("png") || url.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) ext = ".png";
+            else if (contentType.Contains("webp") || url.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)) ext = ".webp";
+            else if (contentType.Contains("gif") || url.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) ext = ".gif";
+
+            var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var fileName = $"{productId}{ext}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+            if (bytes.Length == 0) return null;
+
+            await File.WriteAllBytesAsync(filePath, bytes, ct);
+            return $"/uploads/products/{fileName}?v={DateTime.UtcNow.Ticks}";
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
 

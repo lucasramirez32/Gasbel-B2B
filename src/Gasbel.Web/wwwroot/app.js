@@ -1251,13 +1251,30 @@ function closeProductModal() {
   pendingUploadFile = null;
 }
 
+function normalizeImageUrl(url) {
+  if (!url) return '';
+  url = url.trim();
+  // Convierte URLs de GitHub blob a raw.githubusercontent.com
+  if (url.includes('github.com') && url.includes('/blob/')) {
+    url = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  }
+  return url;
+}
+
 function updateImagePreview(url) {
   const img = document.getElementById('imagePreview');
   const placeholder = document.getElementById('imagePlaceholder');
   if (url) {
-    img.src = url;
-    img.classList.remove('hidden');
-    placeholder.classList.add('hidden');
+    const finalUrl = normalizeImageUrl(url);
+    img.onerror = () => {
+      img.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    };
+    img.onload = () => {
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    };
+    img.src = finalUrl;
   } else {
     img.src = '';
     img.classList.add('hidden');
@@ -1275,7 +1292,11 @@ function onFileSelected(event) {
 }
 
 function onUrlInput(url) {
-  updateImagePreview(url.trim());
+  const normalized = normalizeImageUrl(url);
+  if (normalized !== url && url.includes('github.com')) {
+    document.getElementById('editImageUrl').value = normalized;
+  }
+  updateImagePreview(normalized);
 }
 
 // Asistente Inteligente de Auto-Extracción de Atributos
