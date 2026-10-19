@@ -17,6 +17,12 @@ public static class GasbelCsvImporter
             throw new FileNotFoundException($"El archivo CSV no existe en la ruta: {csvFilePath}");
         }
 
+        using var reader = new StreamReader(csvFilePath);
+        return await ImportArticlesFromReaderAsync(context, reader);
+    }
+
+    public static async Task<int> ImportArticlesFromReaderAsync(GasbelDbContext context, TextReader reader)
+    {
         // 1. Asegurar Grupos de clientes
         var groupRetail = await context.CustomerGroups.FirstOrDefaultAsync(g => g.Code == CustomerGroupCode.Retail);
         if (groupRetail == null)
@@ -109,8 +115,14 @@ public static class GasbelCsvImporter
         await context.SaveChangesAsync();
 
         // 3. Leer y parsear líneas del CSV
-        var lines = await File.ReadAllLinesAsync(csvFilePath);
-        if (lines.Length <= 1)
+        var lines = new List<string>();
+        string? currentLine;
+        while ((currentLine = await reader.ReadLineAsync()) != null)
+        {
+            lines.Add(currentLine);
+        }
+
+        if (lines.Count <= 1)
         {
             return 0;
         }
@@ -122,7 +134,7 @@ public static class GasbelCsvImporter
             .ToDictionaryAsync(p => p.Sku);
 
         // Header: Código art.,Cód.Prov.,Nombre,Stock,Precio costo,P. Venta 1,P. Venta 2,Fecha Cambio,Proveedor,Observaciones
-        for (int i = 1; i < lines.Length; i++)
+        for (int i = 1; i < lines.Count; i++)
         {
             var line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -192,7 +204,7 @@ public static class GasbelCsvImporter
 
             if (existingProducts.TryGetValue(sku, out var product))
             {
-                // Actualizar producto existente
+                // Actualizar producto existente (precios, stock y especificaciones)
                 product.SupplierCode = !string.IsNullOrWhiteSpace(supplierCode) ? supplierCode : product.SupplierCode;
                 product.Name = parsedAttrs.CleanName;
                 product.Description = rawName;
@@ -207,7 +219,7 @@ public static class GasbelCsvImporter
                 product.StockUnits = stock;
                 product.UnitsPerBox = unitsPerBox > 1 ? unitsPerBox : product.UnitsPerBox;
                 product.CategoryId = targetCategory.Id;
-                product.IsActive = isActive;
+                // NOTA: No sobreescribimos product.IsActive ni product.ImageUrl para preservar personalizaciones manuales
             }
             else
             {
@@ -246,13 +258,15 @@ public static class GasbelCsvImporter
                 var gpGastro = product.GroupPrices.FirstOrDefault(g => g.CustomerGroupId == groupGastronomy.Id);
                 if (gpGastro == null)
                 {
-                    product.GroupPrices.Add(new GroupPrice
+                    var gp = new GroupPrice
                     {
                         Id = Guid.NewGuid(),
                         ProductId = product.Id,
                         CustomerGroupId = groupGastronomy.Id,
                         UnitPrice = pVenta2
-                    });
+                    };
+                    context.GroupPrices.Add(gp);
+                    product.GroupPrices.Add(gp);
                 }
                 else
                 {
@@ -262,13 +276,15 @@ public static class GasbelCsvImporter
                 var gpWholesale = product.GroupPrices.FirstOrDefault(g => g.CustomerGroupId == groupWholesale.Id);
                 if (gpWholesale == null)
                 {
-                    product.GroupPrices.Add(new GroupPrice
+                    var gp = new GroupPrice
                     {
                         Id = Guid.NewGuid(),
                         ProductId = product.Id,
                         CustomerGroupId = groupWholesale.Id,
                         UnitPrice = pVenta2
-                    });
+                    };
+                    context.GroupPrices.Add(gp);
+                    product.GroupPrices.Add(gp);
                 }
                 else
                 {
@@ -280,14 +296,16 @@ public static class GasbelCsvImporter
             if (unitsPerBox > 1 && !product.TierPrices.Any(t => t.MinQuantity >= unitsPerBox))
             {
                 decimal tierUnitPrice = pVenta2 > 0 ? pVenta2 : Math.Round(product.BasePrice * 0.90m, 2);
-                product.TierPrices.Add(new TierPrice
+                var tp = new TierPrice
                 {
                     Id = Guid.NewGuid(),
                     ProductId = product.Id,
                     CustomerGroupId = null, // Aplica a todos por bulto cerrado
                     MinQuantity = unitsPerBox,
                     UnitPrice = tierUnitPrice
-                });
+                };
+                context.TierPrices.Add(tp);
+                product.TierPrices.Add(tp);
             }
 
             importedCount++;

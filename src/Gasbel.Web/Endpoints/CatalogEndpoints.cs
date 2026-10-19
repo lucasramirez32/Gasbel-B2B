@@ -432,13 +432,28 @@ public static class CatalogEndpoints
         .WithName("UploadProductImage")
         .WithSummary("Sube una foto real para el producto y actualiza su ImageUrl");
 
-        // Importación de Artículos Gasbel desde CSV
+        // Importación de Artículos Gasbel desde CSV (archivo subido o local)
         group.MapPost("/admin/import-csv", async (
+            HttpRequest request,
             GasbelDbContext dbContext,
             IWebHostEnvironment env,
             CancellationToken ct) =>
         {
-            // Busca data/articulos_gasbel.csv
+            if (request.HasFormContentType && request.Form.Files.Count > 0)
+            {
+                var file = request.Form.Files[0];
+                if (file.Length == 0)
+                {
+                    return Results.BadRequest(new { Message = "El archivo CSV enviado está vacío." });
+                }
+
+                using var stream = file.OpenReadStream();
+                using var reader = new StreamReader(stream);
+                var count = await GasbelCsvImporter.ImportArticlesFromReaderAsync(dbContext, reader);
+                return Results.Ok(new { Message = $"Se importaron y actualizaron exitosamente {count} artículos con sus nuevos precios y datos.", Count = count });
+            }
+
+            // Fallback a archivo en disco si no se envía archivo por formulario
             var csvPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "articulos_gasbel.csv");
             if (!File.Exists(csvPath))
             {
@@ -450,11 +465,12 @@ public static class CatalogEndpoints
                 return Results.BadRequest(new { Message = $"No se encontró el archivo CSV en: {csvPath}" });
             }
 
-            var count = await GasbelCsvImporter.ImportArticlesFromCsvAsync(dbContext, csvPath);
-            return Results.Ok(new { Message = $"Se importaron y sincronizaron exitosamente {count} artículos con sus medidas y especificaciones.", Count = count });
+            var localCount = await GasbelCsvImporter.ImportArticlesFromCsvAsync(dbContext, csvPath);
+            return Results.Ok(new { Message = $"Se importaron y sincronizaron exitosamente {localCount} artículos desde el archivo local.", Count = localCount });
         })
+        .DisableAntiforgery()
         .WithName("ImportCsvArticles")
-        .WithSummary("Importa y sincroniza la base de artículos original del cliente");
+        .WithSummary("Importa y sincroniza la base de artículos desde archivo subido o CSV local");
 
         // ==========================================
         // CONFIGURACIÓN COMERCIAL Y CLIENTES ESPECIALES

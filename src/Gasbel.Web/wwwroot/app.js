@@ -100,10 +100,6 @@ function updateAdminUI() {
       adminNavCenter.classList.remove('hidden');
       adminNavCenter.classList.add('flex');
     }
-    if (btnApiDocs) {
-      btnApiDocs.classList.remove('hidden');
-      btnApiDocs.classList.add('inline-flex');
-    }
     if (btnAdminAccess) btnAdminAccess.classList.add('hidden');
     if (adminBadgeWrapper) {
       adminBadgeWrapper.classList.remove('hidden');
@@ -116,10 +112,6 @@ function updateAdminUI() {
     if (adminNavCenter) {
       adminNavCenter.classList.add('hidden');
       adminNavCenter.classList.remove('flex');
-    }
-    if (btnApiDocs) {
-      btnApiDocs.classList.add('hidden');
-      btnApiDocs.classList.remove('inline-flex');
     }
     if (btnAdminAccess) btnAdminAccess.classList.remove('hidden');
     if (adminBadgeWrapper) {
@@ -1429,9 +1421,47 @@ async function deleteProduct(productId, name) {
   }
 }
 
-// Re-sincronizar CSV
+// Subir e Importar archivo CSV (Precios y Catálogo)
+async function uploadCsvFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!confirm(`¿Deseas importar y actualizar los precios desde el archivo "${file.name}"?\n\nLos artículos existentes actualizarán sus precios y stock, conservando sus fotos y estado.`)) {
+    event.target.value = '';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    showToast('Subiendo y procesando archivo CSV...');
+    const res = await fetch(`${API_BASE}/admin/import-csv`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      await loadCategories();
+      await loadAdminStats();
+      await loadAdminProducts();
+      await loadProducts();
+      showToast(data.message || 'Artículos y precios actualizados exitosamente.');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.message || 'Error al procesar el archivo CSV', false);
+    }
+  } catch (err) {
+    showToast('Error de red al subir el archivo CSV', false);
+  } finally {
+    event.target.value = '';
+  }
+}
+
+// Re-sincronizar CSV (Fallback local)
 async function reimportCsv() {
-  if (!confirm('¿Deseas volver a sincronizar la base completa desde el archivo CSV articulos_gasbel.csv?')) {
+  if (!confirm('¿Deseas sincronizar la base desde el archivo CSV local del servidor?')) {
     return;
   }
 
