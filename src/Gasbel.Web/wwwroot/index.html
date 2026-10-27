@@ -333,7 +333,7 @@
               type="text" 
               id="adminSearchInput" 
               oninput="onAdminSearchInput()" 
-              placeholder="Filtrar por SKU, nombre, proveedor..." 
+              placeholder="Filtrar por SKU, nombre..." 
               class="w-full bg-slate-50 border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
             />
           </div>
@@ -727,14 +727,15 @@
           </div>
         </div>
 
-        <!-- Atributos Extraídos (Dimensiones, Capacidad, Pack, Proveedor) -->
+        <!-- Atributos Extraídos (Dimensiones, Capacidad, Pack) -->
+        <input type="hidden" id="editSupplier" />
         <div class="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3.5 space-y-2.5">
           <div class="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
             <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-600"></i>
             <span>Especificaciones y Atributos Técnicos</span>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">📏 Dimensiones / Medidas</label>
               <input type="text" id="editDimensions" placeholder="Ej: 16x23 cm, 15 cm" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
@@ -746,10 +747,6 @@
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">📦 Presentación / Pack</label>
               <input type="text" id="editPackageQuantity" placeholder="Ej: x 100 U, x 50" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-600 mb-1">🏭 Proveedor</label>
-              <input type="text" id="editSupplier" placeholder="Ej: MOYA, INPLA" class="w-full text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-500" />
             </div>
           </div>
         </div>
@@ -778,7 +775,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div class="sm:col-span-2">
             <label class="block text-xs font-bold text-slate-700 mb-1">Observaciones / Notas</label>
-            <input type="text" id="editNotes" placeholder="Notas internas o aclaraciones del proveedor" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
+            <input type="text" id="editNotes" placeholder="Notas internas o aclaraciones del artículo" class="w-full text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500" />
           </div>
           <div class="flex items-center pt-5">
             <label class="flex items-center gap-2 cursor-pointer">

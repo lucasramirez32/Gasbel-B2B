@@ -671,13 +671,6 @@ function renderProductGrid() {
             <span>En pedido: ${inQuoteUnits} u.</span>
           </span>
         ` : ''}
-
-        <!-- Supplier tag if available -->
-        ${p.supplier ? `
-          <span class="absolute bottom-2 left-2 text-[9px] font-medium bg-white/90 backdrop-blur px-2 py-0.5 rounded shadow-xs text-slate-600 border border-slate-200/60">
-            ${p.supplier}
-          </span>
-        ` : ''}
       </div>
 
       <div class="p-4 flex-1 flex flex-col">
@@ -1064,7 +1057,6 @@ function renderAdminTable() {
         <span class="font-bold text-slate-800 line-clamp-1 block" title="${p.name}">${p.name}</span>
         <div class="flex items-center gap-1.5 mt-0.5">
           <span class="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded font-medium">${p.categoryName}</span>
-          ${p.supplier ? `<span class="text-[10px] text-slate-400">· ${p.supplier}</span>` : ''}
         </div>
       </td>
 
