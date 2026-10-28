@@ -110,3 +110,66 @@ ELSE:
   1. Resumen de pedido con desglose de ítems, cantidades, tipo de empaque (paquetes vs. bultos), precio unitario aplicado, subtotales y total general.
   2. Posibilidad de descargar o imprimir la cotización en formato orden de pedido.
   3. Opción para enviar el pedido vía WhatsApp / Email directamente a ventas de Gasbel.
+
+---
+
+## 6. Requerimientos Comerciales Dinámicos y Panel Administrativo (Reunión Octubre 2026)
+
+### 6.1. Indicadores de Stock y Acción de Compra en Catálogo
+- Se elimina la visualización de cantidades numéricas de stock para usuarios finales.
+- Se implementa un indicador visual simplificado:
+  - **Verde ("Hay stock")**: Si `StockUnits > 0`.
+  - **Gris ("Sin stock")**: Si `StockUnits == 0`.
+- El cliente puede añadir artículos y cotizar independientemente de la disponibilidad actual.
+- El botón de acción de cada tarjeta se estandariza con el texto **"Añadir"**.
+
+### 6.2. Reglas Comerciales Dinámicas y Umbrales Configurables
+Desde la pestaña de administración **Reglas Comerciales & WhatsApp**, el administrador puede configurar:
+1. **Compra Mínima para Descuento Mayorista (Lista 2)**:
+   - Valor inicial: **$ 50.000,00 ARS**.
+   - Si el pedido supera este monto, se desbloquean los precios mayoristas o el descuento específico en el comprobante final.
+2. **Compra Mínima para Envío Gratis y Leyenda Personalizada**:
+   - Valor inicial: **$ 100.000,00 ARS**.
+   - Leyenda personalizable (ej. *"El envío es gratis a partir de "*).
+3. **Enrutamiento y Modo de Pruebas de WhatsApp**:
+   - Número de pruebas: `2613890532`.
+   - Número de producción: `2616799084`.
+   - Switch de activación de modo de pruebas para alternar el destino de las cotizaciones emitidas.
+
+### 6.3. Clientes con Descuento Especial y Enlaces Personalizados
+- **Grilla y ABM Administrativo**: Gestión de clientes con porcentaje preferencial exclusivo (ej: 25%, 30%).
+- **Enlaces de Acceso Personalizados (`?cliente={id}`)**:
+  - Cada cliente cuenta con un enlace exclusivo generado desde la grilla administrativa.
+  - Botón de copiado con un clic y botón de envío directo con mensaje redactado por WhatsApp.
+- **Experiencia del Cliente con Enlace**:
+  - Detección automática al cargar la plataforma.
+  - Banner VIP de bienvenida destacando su beneficio exclusivo.
+  - En cada tarjeta de producto se visualiza su precio final con el descuento aplicado.
+  - Pre-llenado de datos del cliente (nombre, dirección, teléfono) en el formulario de cotización.
+
+### 6.4. Rediseño del Cotizador Lateral (Drawer) y Modo Pantalla Completa
+- Estructura vertical con scroll independiente (`flex-1 min-h-0 overflow-y-auto`) para evitar colapsos visuales.
+- **Sticky Footer Fijo**: Barra inferior con total a pagar y botones de **"Presupuesto"** y **"WhatsApp"** siempre visibles.
+- **Modo Pantalla Completa**: Botón de maximizar (`maximize-2` / `minimize-2`) que expande el panel a pantalla completa en 2 columnas (artículos a la izquierda, formulario y totales a la derecha).
+- Formulario de entrega integrado con dirección, switch de envío a domicilio y notas.
+
+---
+
+## 7. Reglas de Persistencia de Imágenes, Base de Datos y Despliegues Inmutables
+
+### 7.1. Ubicación Persistente de la Base de Datos SQLite
+- En entornos Docker y de desarrollo, la base de datos SQLite DEBE alojarse obligatoriamente dentro del volumen persistente `./data` (`Data Source=data/gasbel_b2b.db`, mapeado a `/app/data/gasbel_b2b.db` en el contenedor).
+- **Prohibición estricta**: Nunca debe alojarse `gasbel_b2b.db` en la raíz efímera `/app/` del contenedor, para evitar que `docker compose up -d --build` destruya los artículos creados, ediciones manuales o vínculos de imágenes en cada despliegue.
+
+### 7.2. Estándar de Nombrado de Imágenes por SKU y Auto-Vinculación
+- Toda imagen de producto subida desde el ABM (`POST /api/admin/products/{id}/image`) o descargada desde URL externa DEBE almacenarse físicamente en el volumen persistente `wwwroot/uploads/products/` utilizando el **SKU sanitizado** como nombre de archivo (ej. `1415.jpg`, `1415.png`, `1415.webp`), en lugar de depender exclusivamente de un `Guid` aleatorio.
+- Al subir una nueva imagen para un SKU, el sistema limpia cualquier archivo previo con otra extensión para ese mismo SKU o ID, evitando archivos duplicados o huérfanos.
+- **Auto-vinculación en arranque e importación (`SyncProductImagesFromDiskAsync`)**:
+  - En cada inicio de la aplicación y tras cada importación de CSV, el sistema escanea `wwwroot/uploads/products/` y vincula automáticamente cualquier imagen física cuyo nombre coincida con el `Sku` (o `Id`) del artículo si su `ImageUrl` está vacío o apunta a un archivo inexistente.
+
+### 7.3. Regla de Sincronización No-Destructiva en Startup vs. Importación Manual CSV
+- **En el arranque del contenedor (`Program.cs`)**: El importador CSV se ejecuta con `overwriteExisting: false`. Únicamente inserta SKUs que aún no existan en la base de datos y **jamás pisa** nombres, medidas, precios, estados ni fotos de artículos existentes o creados manualmente en el ABM.
+- **En la importación manual desde el ABM (`POST /api/admin/import-csv`)**: Se ejecuta con `overwriteExisting: true`, actualizando precios y stock desde el nuevo archivo CSV, persistiendo una copia en `data/articulos_gasbel.csv`, pero **preservando siempre `ImageUrl` e `IsActive`** y ejecutando a continuación la revinculación automática de imágenes en disco.
+- **En el script de despliegue (`deploy.ps1`)**: Antes de recrear el contenedor, garantiza la existencia de los directorios `data/` y `uploads/products/` en el servidor host y rescata cualquier base de datos previa si aún no fue migrada al volumen `./data`.
+
+

@@ -223,7 +223,7 @@ public static class CatalogEndpoints
             if (!string.IsNullOrWhiteSpace(finalImageUrl) && 
                 (finalImageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || finalImageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
             {
-                var downloaded = await DownloadAndSaveProductImageAsync(productId, finalImageUrl, httpClientFactory, env, ct);
+                var downloaded = await DownloadAndSaveProductImageAsync(req.Sku.Trim(), productId, finalImageUrl, httpClientFactory, env, ct);
                 if (!string.IsNullOrWhiteSpace(downloaded))
                 {
                     finalImageUrl = downloaded;
@@ -318,7 +318,7 @@ public static class CatalogEndpoints
                 var imgUrl = req.ImageUrl.Trim();
                 if (imgUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || imgUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    var downloaded = await DownloadAndSaveProductImageAsync(product.Id, imgUrl, httpClientFactory, env, ct);
+                    var downloaded = await DownloadAndSaveProductImageAsync(product.Sku, product.Id, imgUrl, httpClientFactory, env, ct);
                     product.ImageUrl = downloaded ?? imgUrl;
                 }
                 else
@@ -404,13 +404,32 @@ public static class CatalogEndpoints
                 return Results.BadRequest(new { Message = "Formato no permitido. Utilice imágenes JPG, PNG o WEBP." });
             }
 
+            var product = await catalogRepo.GetProductByIdAsync(id, ct);
+            if (product == null)
+            {
+                return Results.NotFound(new { Message = "Producto no encontrado." });
+            }
+
             var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
             if (!Directory.Exists(uploadsFolder))
             {
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            var fileName = $"{id}{ext}";
+            var safeSku = GasbelCsvImporter.SanitizeSkuForFileName(product.Sku);
+            var baseFileName = !string.IsNullOrWhiteSpace(safeSku) ? safeSku : id.ToString();
+
+            // Limpiar archivos anteriores del mismo SKU o ID con otra extensión para evitar duplicados huérfanos
+            foreach (var oldExt in allowedExtensions)
+            {
+                var oldBySku = Path.Combine(uploadsFolder, $"{baseFileName}{oldExt}");
+                if (File.Exists(oldBySku)) File.Delete(oldBySku);
+
+                var oldById = Path.Combine(uploadsFolder, $"{id}{oldExt}");
+                if (File.Exists(oldById)) File.Delete(oldById);
+            }
+
+            var fileName = $"{baseFileName}{ext}";
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -430,7 +449,7 @@ public static class CatalogEndpoints
         })
         .DisableAntiforgery()
         .WithName("UploadProductImage")
-        .WithSummary("Sube una foto real para el producto y actualiza su ImageUrl");
+        .WithSummary("Sube una foto real para el producto (nombrada por SKU) y actualiza su ImageUrl");
 
         // Importación de Artículos Gasbel desde CSV (archivo subido o local)
         group.MapPost("/admin/import-csv", async (
@@ -439,6 +458,14 @@ public static class CatalogEndpoints
             IWebHostEnvironment env,
             CancellationToken ct) =>
         {
+            var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+            var dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+            if (!Directory.Exists(dataDir))
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+            var csvPath = Path.Combine(dataDir, "articulos_gasbel.csv");
+
             if (request.HasFormContentType && request.Form.Files.Count > 0)
             {
                 var file = request.Form.Files[0];
@@ -447,14 +474,19 @@ public static class CatalogEndpoints
                     return Results.BadRequest(new { Message = "El archivo CSV enviado está vacío." });
                 }
 
-                using var stream = file.OpenReadStream();
-                using var reader = new StreamReader(stream);
-                var count = await GasbelCsvImporter.ImportArticlesFromReaderAsync(dbContext, reader);
+                // Persistir copia del CSV subido en el volumen ./data para futuros arranques
+                using (var fileStream = new FileStream(csvPath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream, ct);
+                }
+
+                using var reader = new StreamReader(csvPath);
+                var count = await GasbelCsvImporter.ImportArticlesFromReaderAsync(dbContext, reader, overwriteExisting: true);
+                await GasbelCsvImporter.SyncProductImagesFromDiskAsync(dbContext, uploadsFolder);
                 return Results.Ok(new { Message = $"Se importaron y actualizaron exitosamente {count} artículos con sus nuevos precios y datos.", Count = count });
             }
 
             // Fallback a archivo en disco si no se envía archivo por formulario
-            var csvPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "articulos_gasbel.csv");
             if (!File.Exists(csvPath))
             {
                 csvPath = Path.Combine(AppContext.BaseDirectory, "data", "articulos_gasbel.csv");
@@ -465,7 +497,8 @@ public static class CatalogEndpoints
                 return Results.BadRequest(new { Message = $"No se encontró el archivo CSV en: {csvPath}" });
             }
 
-            var localCount = await GasbelCsvImporter.ImportArticlesFromCsvAsync(dbContext, csvPath);
+            var localCount = await GasbelCsvImporter.ImportArticlesFromCsvAsync(dbContext, csvPath, overwriteExisting: true);
+            await GasbelCsvImporter.SyncProductImagesFromDiskAsync(dbContext, uploadsFolder);
             return Results.Ok(new { Message = $"Se importaron y sincronizaron exitosamente {localCount} artículos desde el archivo local.", Count = localCount });
         })
         .DisableAntiforgery()
@@ -587,6 +620,7 @@ public static class CatalogEndpoints
     }
 
     private static async Task<string?> DownloadAndSaveProductImageAsync(
+        string? sku,
         Guid productId,
         string url,
         IHttpClientFactory httpClientFactory,
@@ -616,30 +650,76 @@ public static class CatalogEndpoints
             }
 
             var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "";
-            string ext = ".jpg";
-            if (contentType.Contains("png") || url.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) ext = ".png";
-            else if (contentType.Contains("webp") || url.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)) ext = ".webp";
-            else if (contentType.Contains("gif") || url.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) ext = ".gif";
 
-            var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
-            if (!Directory.Exists(uploadsFolder))
+            // Si la URL pegada es una página web (ej: link compartido de ChatGPT o catálogo web), intentar extraer og:image
+            if (contentType.Contains("html"))
             {
-                Directory.CreateDirectory(uploadsFolder);
+                var html = await response.Content.ReadAsStringAsync(ct);
+                var ogMatch = System.Text.RegularExpressions.Regex.Match(
+                    html,
+                    @"<meta[^>]+property=[""']og:image[""'][^>]+content=[""']([^""']+)[""']",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (!ogMatch.Success)
+                {
+                    ogMatch = System.Text.RegularExpressions.Regex.Match(
+                        html,
+                        @"<meta[^>]+content=[""']([^""']+)[""'][^>]+property=[""']og:image[""']",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                }
+
+                if (ogMatch.Success)
+                {
+                    var ogImageUrl = System.Net.WebUtility.HtmlDecode(ogMatch.Groups[1].Value);
+                    using var imgResponse = await client.GetAsync(ogImageUrl, ct);
+                    if (!imgResponse.IsSuccessStatusCode) return null;
+
+                    var ogContentType = imgResponse.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? "";
+                    if (ogContentType.Contains("html")) return null;
+
+                    return await SaveImageBytesAsync(sku, productId, ogImageUrl, ogContentType, await imgResponse.Content.ReadAsByteArrayAsync(ct), env, ct);
+                }
+
+                return null;
             }
 
-            var fileName = $"{productId}{ext}";
-            var filePath = Path.Combine(uploadsFolder, fileName);
-
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
-            if (bytes.Length == 0) return null;
-
-            await File.WriteAllBytesAsync(filePath, bytes, ct);
-            return $"/uploads/products/{fileName}?v={DateTime.UtcNow.Ticks}";
+            return await SaveImageBytesAsync(sku, productId, url, contentType, bytes, env, ct);
         }
         catch
         {
             return null;
         }
+    }
+
+    private static async Task<string?> SaveImageBytesAsync(
+        string? sku,
+        Guid productId,
+        string sourceUrl,
+        string contentType,
+        byte[] bytes,
+        IWebHostEnvironment env,
+        CancellationToken ct)
+    {
+        if (bytes.Length == 0) return null;
+
+        string ext = ".jpg";
+        if (contentType.Contains("png") || sourceUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) ext = ".png";
+        else if (contentType.Contains("webp") || sourceUrl.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)) ext = ".webp";
+        else if (contentType.Contains("gif") || sourceUrl.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)) ext = ".gif";
+
+        var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            Directory.CreateDirectory(uploadsFolder);
+        }
+
+        var safeSku = GasbelCsvImporter.SanitizeSkuForFileName(sku);
+        var baseFileName = !string.IsNullOrWhiteSpace(safeSku) ? safeSku : productId.ToString();
+        var fileName = $"{baseFileName}{ext}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        await File.WriteAllBytesAsync(filePath, bytes, ct);
+        return $"/uploads/products/{fileName}?v={DateTime.UtcNow.Ticks}";
     }
 }
 

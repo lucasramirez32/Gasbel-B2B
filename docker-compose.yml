@@ -11,6 +11,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - DatabaseProvider=Sqlite
+      - ConnectionStrings__SqliteConnection=Data Source=/app/data/gasbel_b2b.db
     networks:
       - default
       - foyke_net

@@ -21,9 +21,9 @@ if ($gitStatus) {
 Write-Host "Pusheando a GitHub main..." -ForegroundColor Yellow
 git push origin main
 
-# 2. Conexión SSH y actualización del contenedor en el Droplet
+# 2. Conexión SSH y actualización del contenedor en el Droplet (asegurando persistencia de DB e imágenes)
 Write-Host "Conectando al Droplet y actualizando contenedor..." -ForegroundColor Yellow
-$remoteCommands = 'cd /root/Gasbel-B2B && git pull origin main && docker compose up -d --build && docker restart foyke-web'
+$remoteCommands = 'cd /root/Gasbel-B2B && mkdir -p data uploads/products && if [ ! -f data/gasbel_b2b.db ]; then docker cp gasbel-web:/app/gasbel_b2b.db data/gasbel_b2b.db 2>/dev/null || true; fi && git pull origin main && docker compose up -d --build && docker restart foyke-web'
 
 ssh -i "$SshKeyPath" -o StrictHostKeyChecking=no root@$DropletIp $remoteCommands
 

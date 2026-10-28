@@ -110,3 +110,14 @@ flowchart TD
 - [x] **T028**: Integrar formulario previo al envío en cotizador con dirección del cliente, switch de entrega a domicilio y leyenda dinámica de envío gratis.
 - [x] **T029**: Desarrollar suite de tests unitarios para `CommercialSettingsService` y verificar paso de 26/26 pruebas.
 
+---
+
+### Fase 8: Persistencia Inmutable de Imágenes, Base de Datos en Volumen Docker y Sincronización por SKU
+- [x] **T030**: Mover cadena de conexión SQLite (`SqliteConnection`) hacia el volumen persistente `data/gasbel_b2b.db` en `appsettings.json`, `Program.cs` y `docker-compose.yml` (`/app/data/gasbel_b2b.db`), con migración automática si existía en la raíz.
+- [x] **T031**: Guardar imágenes subidas o descargadas en `wwwroot/uploads/products/` nombradas por SKU sanitizado (`{sku}.{ext}`, ej. `1415.jpg`) y limpiar extensiones previas para evitar archivos huérfanos.
+- [x] **T032**: Implementar `GasbelCsvImporter.SyncProductImagesFromDiskAsync` para auto-vincular imágenes físicas existentes en `wwwroot/uploads/products/` por SKU o ID en cada arranque e importación CSV.
+- [x] **T033**: Configurar `GasbelCsvImporter` con modo `overwriteExisting: false` en el arranque (`Program.cs`) para no pisar ediciones manuales, precios ni artículos de prueba creados en el ABM al reiniciar el contenedor.
+- [x] **T034**: Blindar `deploy.ps1`, `.gitignore` y `.dockerignore` para preservar la base de datos y carpeta de imágenes en cada despliegue en DigitalOcean.
+- [x] **T035**: Agregar pruebas de integración en `CsvImporterIntegrationTests` validando la auto-vinculación de la imagen del artículo `1415` y la preservación de ediciones en reinicios.
+
+

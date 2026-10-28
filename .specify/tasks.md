@@ -94,3 +94,30 @@ flowchart TD
 - [x] **T016**: Compilación completa de la solución y ejecución de todos los tests automatizados (`dotnet test` pasó con 5/5 superados).
 - [x] **T017**: Validación de correspondencia entre el catálogo de descartables del documento y los seeders generados.
 - [x] **T018**: Verificación final de convergencia con GitHub Spec Kit.
+
+---
+
+### Fase 7: Requerimientos Comerciales de Cliente, Descuentos Especiales y Rediseño de Cotizador
+- [x] **T019**: Modificar indicador de stock en cards: badge visual simplificado (verde con stock, gris sin stock) sin valores numéricos, permitiendo añadir al pedido en cualquier condición.
+- [x] **T020**: Cambiar texto de botón de compra en cards de "Cotizar" a "Añadir".
+- [x] **T021**: Implementar `CommercialSettings` y `CommercialSettingsService` con persistencia JSON para umbral de compra mínima de descuento mayorista ($50.000), umbral de envío gratis ($100.000) y números de WhatsApp (pruebas: 2613890532 vs producción: 2616799084).
+- [x] **T022**: Implementar `SpecialDiscountClient` y endpoints CRUD para clientes con descuento especial (25%, 30%, etc.).
+- [x] **T023**: Desarrollar pestañas de administración en vista ABM: Artículos, Clientes con Descuento Especial y Reglas Comerciales & WhatsApp.
+- [x] **T024**: Implementar generación de enlaces personalizados (`?cliente={id}`) con botones de "Copiar Link" y envío directo por WhatsApp.
+- [x] **T025**: Implementar detección automática de cliente vía URL, banner VIP de bienvenida y reflejo del precio con descuento en cada producto del catálogo.
+- [x] **T026**: Rediseñar panel lateral de cotización (Drawer): scroll unificado, sticky footer para total y botones de acción permanentemente visibles.
+- [x] **T027**: Implementar botón de maximizar / reducir pantalla completa en 2 columnas en el cotizador lateral.
+- [x] **T028**: Integrar formulario previo al envío en cotizador con dirección del cliente, switch de entrega a domicilio y leyenda dinámica de envío gratis.
+- [x] **T029**: Desarrollar suite de tests unitarios para `CommercialSettingsService` y verificar paso de 26/26 pruebas.
+
+---
+
+### Fase 8: Persistencia Inmutable de Imágenes, Base de Datos en Volumen Docker y Sincronización por SKU
+- [x] **T030**: Mover cadena de conexión SQLite (`SqliteConnection`) hacia el volumen persistente `data/gasbel_b2b.db` en `appsettings.json`, `Program.cs` y `docker-compose.yml` (`/app/data/gasbel_b2b.db`), con migración automática si existía en la raíz.
+- [x] **T031**: Guardar imágenes subidas o descargadas en `wwwroot/uploads/products/` nombradas por SKU sanitizado (`{sku}.{ext}`, ej. `1415.jpg`) y limpiar extensiones previas para evitar archivos huérfanos.
+- [x] **T032**: Implementar `GasbelCsvImporter.SyncProductImagesFromDiskAsync` para auto-vincular imágenes físicas existentes en `wwwroot/uploads/products/` por SKU o ID en cada arranque e importación CSV.
+- [x] **T033**: Configurar `GasbelCsvImporter` con modo `overwriteExisting: false` en el arranque (`Program.cs`) para no pisar ediciones manuales, precios ni artículos de prueba creados en el ABM al reiniciar el contenedor.
+- [x] **T034**: Blindar `deploy.ps1`, `.gitignore` y `.dockerignore` para preservar la base de datos y carpeta de imágenes en cada despliegue en DigitalOcean.
+- [x] **T035**: Agregar pruebas de integración en `CsvImporterIntegrationTests` validando la auto-vinculación de la imagen del artículo `1415` y la preservación de ediciones en reinicios.
+
+

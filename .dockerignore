@@ -6,4 +6,8 @@
 **/node_modules
 *.user
 *.suo
+*.db
+*.db-shm
+*.db-wal
+uploads/
 tests/

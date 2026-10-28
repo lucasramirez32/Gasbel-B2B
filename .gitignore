@@ -34,7 +34,10 @@ $RECYCLE.BIN/
 *.db-shm
 *.db-wal
 
-# Runtime data & secrets
+# Runtime data, uploads & secrets
 data/commercial_settings.json
 data/special_clients.json
 data/emails/
+uploads/
+src/Gasbel.Web/wwwroot/uploads/products/*
+!src/Gasbel.Web/wwwroot/uploads/products/.gitkeep

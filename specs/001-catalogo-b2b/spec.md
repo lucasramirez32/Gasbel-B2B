@@ -153,3 +153,23 @@ Desde la pestaña de administración **Reglas Comerciales & WhatsApp**, el admin
 - **Modo Pantalla Completa**: Botón de maximizar (`maximize-2` / `minimize-2`) que expande el panel a pantalla completa en 2 columnas (artículos a la izquierda, formulario y totales a la derecha).
 - Formulario de entrega integrado con dirección, switch de envío a domicilio y notas.
 
+---
+
+## 7. Reglas de Persistencia de Imágenes, Base de Datos y Despliegues Inmutables
+
+### 7.1. Ubicación Persistente de la Base de Datos SQLite
+- En entornos Docker y de desarrollo, la base de datos SQLite DEBE alojarse obligatoriamente dentro del volumen persistente `./data` (`Data Source=data/gasbel_b2b.db`, mapeado a `/app/data/gasbel_b2b.db` en el contenedor).
+- **Prohibición estricta**: Nunca debe alojarse `gasbel_b2b.db` en la raíz efímera `/app/` del contenedor, para evitar que `docker compose up -d --build` destruya los artículos creados, ediciones manuales o vínculos de imágenes en cada despliegue.
+
+### 7.2. Estándar de Nombrado de Imágenes por SKU y Auto-Vinculación
+- Toda imagen de producto subida desde el ABM (`POST /api/admin/products/{id}/image`) o descargada desde URL externa DEBE almacenarse físicamente en el volumen persistente `wwwroot/uploads/products/` utilizando el **SKU sanitizado** como nombre de archivo (ej. `1415.jpg`, `1415.png`, `1415.webp`), en lugar de depender exclusivamente de un `Guid` aleatorio.
+- Al subir una nueva imagen para un SKU, el sistema limpia cualquier archivo previo con otra extensión para ese mismo SKU o ID, evitando archivos duplicados o huérfanos.
+- **Auto-vinculación en arranque e importación (`SyncProductImagesFromDiskAsync`)**:
+  - En cada inicio de la aplicación y tras cada importación de CSV, el sistema escanea `wwwroot/uploads/products/` y vincula automáticamente cualquier imagen física cuyo nombre coincida con el `Sku` (o `Id`) del artículo si su `ImageUrl` está vacío o apunta a un archivo inexistente.
+
+### 7.3. Regla de Sincronización No-Destructiva en Startup vs. Importación Manual CSV
+- **En el arranque del contenedor (`Program.cs`)**: El importador CSV se ejecuta con `overwriteExisting: false`. Únicamente inserta SKUs que aún no existan en la base de datos y **jamás pisa** nombres, medidas, precios, estados ni fotos de artículos existentes o creados manualmente en el ABM.
+- **En la importación manual desde el ABM (`POST /api/admin/import-csv`)**: Se ejecuta con `overwriteExisting: true`, actualizando precios y stock desde el nuevo archivo CSV, persistiendo una copia en `data/articulos_gasbel.csv`, pero **preservando siempre `ImageUrl` e `IsActive`** y ejecutando a continuación la revinculación automática de imágenes en disco.
+- **En el script de despliegue (`deploy.ps1`)**: Antes de recrear el contenedor, garantiza la existencia de los directorios `data/` y `uploads/products/` en el servidor host y rescata cualquier base de datos previa si aún no fue migrada al volumen `./data`.
+
+

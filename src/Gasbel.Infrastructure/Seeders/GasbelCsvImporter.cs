@@ -10,7 +10,36 @@ namespace Gasbel.Infrastructure.Seeders;
 
 public static class GasbelCsvImporter
 {
-    public static async Task<int> ImportArticlesFromCsvAsync(GasbelDbContext context, string csvFilePath)
+    private static readonly string[] AllowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
+    public static string SanitizeSkuForFileName(string? sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = sku.Trim();
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sb = new System.Text.StringBuilder(trimmed.Length);
+        foreach (var ch in trimmed)
+        {
+            if (Array.IndexOf(invalidChars, ch) >= 0 || char.IsWhiteSpace(ch))
+            {
+                sb.Append('_');
+            }
+            else
+            {
+                sb.Append(ch);
+            }
+        }
+        return sb.ToString();
+    }
+
+    public static async Task<int> ImportArticlesFromCsvAsync(
+        GasbelDbContext context,
+        string csvFilePath,
+        bool overwriteExisting = true)
     {
         if (!File.Exists(csvFilePath))
         {
@@ -18,10 +47,13 @@ public static class GasbelCsvImporter
         }
 
         using var reader = new StreamReader(csvFilePath);
-        return await ImportArticlesFromReaderAsync(context, reader);
+        return await ImportArticlesFromReaderAsync(context, reader, overwriteExisting);
     }
 
-    public static async Task<int> ImportArticlesFromReaderAsync(GasbelDbContext context, TextReader reader)
+    public static async Task<int> ImportArticlesFromReaderAsync(
+        GasbelDbContext context,
+        TextReader reader,
+        bool overwriteExisting = true)
     {
         // 1. Asegurar Grupos de clientes
         var groupRetail = await context.CustomerGroups.FirstOrDefaultAsync(g => g.Code == CustomerGroupCode.Retail);
@@ -204,13 +236,19 @@ public static class GasbelCsvImporter
 
             if (existingProducts.TryGetValue(sku, out var product))
             {
-                // Actualizar producto existente (precios, stock y especificaciones)
+                if (!overwriteExisting)
+                {
+                    // En arranque normal (startup) no pisamos ningún atributo de productos ya existentes en la base
+                    continue;
+                }
+
+                // Actualizar producto existente (precios, stock y especificaciones) preservando personalizaciones
                 product.SupplierCode = !string.IsNullOrWhiteSpace(supplierCode) ? supplierCode : product.SupplierCode;
                 product.Name = parsedAttrs.CleanName;
                 product.Description = rawName;
-                product.Dimensions = parsedAttrs.Dimensions;
-                product.Capacity = parsedAttrs.Capacity;
-                product.PackageQuantity = parsedAttrs.PackageQuantity;
+                product.Dimensions = !string.IsNullOrWhiteSpace(parsedAttrs.Dimensions) ? parsedAttrs.Dimensions : product.Dimensions;
+                product.Capacity = !string.IsNullOrWhiteSpace(parsedAttrs.Capacity) ? parsedAttrs.Capacity : product.Capacity;
+                product.PackageQuantity = !string.IsNullOrWhiteSpace(parsedAttrs.PackageQuantity) ? parsedAttrs.PackageQuantity : product.PackageQuantity;
                 product.Supplier = supplier;
                 product.Notes = notes;
                 product.CostPrice = costPrice;
@@ -313,6 +351,89 @@ public static class GasbelCsvImporter
 
         await context.SaveChangesAsync();
         return importedCount;
+    }
+
+    /// <summary>
+    /// Escanea la carpeta física de imágenes (wwwroot/uploads/products) y revincula automáticamente
+    /// los archivos existentes por SKU (ej: 1415.jpg) o por Id de producto si el campo ImageUrl está vacío o desincronizado.
+    /// </summary>
+    public static async Task<int> SyncProductImagesFromDiskAsync(GasbelDbContext context, string uploadsProductsDir)
+    {
+        if (!Directory.Exists(uploadsProductsDir))
+        {
+            return 0;
+        }
+
+        var files = Directory.GetFiles(uploadsProductsDir)
+            .Where(f => AllowedImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            return 0;
+        }
+
+        var fileMapByBaseName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files)
+        {
+            var baseName = Path.GetFileNameWithoutExtension(file);
+            if (!string.IsNullOrWhiteSpace(baseName))
+            {
+                fileMapByBaseName[baseName] = file;
+            }
+        }
+
+        var products = await context.Products.ToListAsync();
+        int updatedCount = 0;
+
+        foreach (var product in products)
+        {
+            // Verificar si ya tiene un ImageUrl local que apunta a un archivo inexistente
+            if (!string.IsNullOrWhiteSpace(product.ImageUrl) &&
+                product.ImageUrl.StartsWith("/uploads/products/", StringComparison.OrdinalIgnoreCase))
+            {
+                var cleanPath = product.ImageUrl.Split('?')[0];
+                var existingFileName = Path.GetFileName(cleanPath);
+                var expectedFullPath = Path.Combine(uploadsProductsDir, existingFileName);
+                if (File.Exists(expectedFullPath))
+                {
+                    continue; // La imagen local existe y es válida
+                }
+
+                // El archivo referenciado ya no existe con ese nombre; intentaremos revincular por SKU o ID
+                product.ImageUrl = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                var safeSku = SanitizeSkuForFileName(product.Sku);
+                string? matchedFile = null;
+
+                if (!string.IsNullOrWhiteSpace(safeSku) && fileMapByBaseName.TryGetValue(safeSku, out var bySku))
+                {
+                    matchedFile = bySku;
+                }
+                else if (fileMapByBaseName.TryGetValue(product.Id.ToString(), out var byId))
+                {
+                    matchedFile = byId;
+                }
+
+                if (matchedFile != null)
+                {
+                    var fileName = Path.GetFileName(matchedFile);
+                    var ticks = File.GetLastWriteTimeUtc(matchedFile).Ticks;
+                    product.ImageUrl = $"/uploads/products/{fileName}?v={ticks}";
+                    updatedCount++;
+                }
+            }
+        }
+
+        if (updatedCount > 0)
+        {
+            await context.SaveChangesAsync();
+        }
+
+        return updatedCount;
     }
 
     private static List<string> ParseCsvLine(string line)

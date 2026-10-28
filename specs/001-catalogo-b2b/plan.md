@@ -169,3 +169,16 @@ erDiagram
   3. **Drawer / Modal del Cotizador:**
      - Vista de presupuesto con cálculo de ahorro total mayorista.
      - Botón de generación de presupuesto con enlace para enviar a WhatsApp con mensaje preformateado.
+
+---
+
+## 5. Arquitectura de Persistencia en Producción y Despliegue Seguro (Docker)
+
+### 5.1. Volúmenes Persistentes Obligatorios (`docker-compose.yml`)
+- `./data:/app/data`: Almacena la base de datos relacional (`gasbel_b2b.db`), las reglas comerciales (`commercial_settings.json`), la grilla de clientes especiales (`special_clients.json`) y el maestro CSV sincronizado (`articulos_gasbel.csv`).
+- `./uploads:/app/wwwroot/uploads`: Almacena todas las fotografías de artículos en `/app/wwwroot/uploads/products/`.
+
+### 5.2. Resiliencia de Imágenes de Productos
+- **Identificación determinista por SKU**: Los archivos de imagen se guardan como `{SanitizedSku}.{ext}` (ej. `/uploads/products/1415.jpg`), desacoplando la persistencia visual del `Guid` interno de la base de datos.
+- **Reconciliación en arranque (`SyncProductImagesFromDiskAsync`)**: Durante el arranque de `Program.cs` y tras `POST /api/admin/import-csv`, el servicio verifica la integridad entre `wwwroot/uploads/products/` y la tabla `Products`, auto-vinculando cualquier imagen existente en disco por `Sku` o `Id`.
+
